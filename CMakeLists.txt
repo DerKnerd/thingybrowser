@@ -39,8 +39,8 @@ conan_cmake_configure(
         REQUIRES
         nlohmann_json/3.10.5
         cpp-httplib/0.10.3
+        libthingy/0.7@libthingy/libthingy
         openssl/3.0.1
-        libthingy/0.3@libthingy/libthingy
         GENERATORS cmake_find_package
 )
 
@@ -55,8 +55,8 @@ conan_cmake_install(PATH_OR_REFERENCE .
 
 find_package(libthingy)
 find_package(nlohmann_json)
-find_package(OpenSSL)
 find_package(httplib)
+find_package(OpenSSL)
 
 add_executable(thingybrowser main.cpp MainWindow.cpp MainApp.cpp)
-target_link_libraries(thingybrowser PRIVATE wx::base wx::core OpenSSL::SSL httplib::httplib nlohmann_json::nlohmann_json libthingy::libthingy)
+target_link_libraries(thingybrowser PRIVATE OpenSSL::SSL OpenSSL::Crypto  wx::base wx::core httplib::httplib nlohmann_json::nlohmann_json libthingy::libthingy)
