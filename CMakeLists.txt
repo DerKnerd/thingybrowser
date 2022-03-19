@@ -12,6 +12,7 @@ if (WIN32 OR MINGW)
     set(CMAKE_SYSTEM_PROCESSOR x86_64)
     set(CONAN_ARCHITECTURE x86_64)
     set(options Poco:enable_netssl_win=True Poco:enable_netssl=False)
+    ucm_set_linker_flags(/NXDOMAIN)
 
     conan_cmake_run(
             BASIC_SETUP
