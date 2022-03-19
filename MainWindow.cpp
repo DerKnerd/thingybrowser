@@ -7,7 +7,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #endif
-#include <libthingy.h>
+#include "libs/libthingy/libthingy.h"
 
 void MainWindow::loadData(wxCommandEvent &event) {
     auto client = thingy::ThingiverseClient("10e4e2ef41ebdb349b72975474c5f2e0");
