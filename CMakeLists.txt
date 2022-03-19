@@ -22,6 +22,7 @@ if (WIN32 OR MINGW)
             ENV CXXFLAGS=${CMAKE_CXX_FLAGS}
             SETTINGS os=Windows
             SETTINGS compiler.cppstd=20
+            SETTINGS compiler.libcxx=libstdc++11
     )
 endif ()
 
