@@ -30,18 +30,18 @@ endif ()
 set(wxUSE_STL ON)
 set(wxBUILD_SHARED OFF)
 add_subdirectory(libs/wxWidgets)
+add_subdirectory(libs/libthingy)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
-
-conan_add_remote(NAME jinya.jfrog.io
-        URL https://jinya.jfrog.io/artifactory/api/conan/default-conan/)
+#
+#conan_add_remote(NAME jinya.jfrog.io
+#        URL https://jinya.jfrog.io/artifactory/api/conan/default-conan/)
 
 conan_cmake_configure(
         REQUIRES
         nlohmann_json/3.10.5
         cpp-httplib/0.10.3
-        libthingy/0.7@libthingy/libthingy
         openssl/3.0.1
         GENERATORS cmake_find_package
 )
@@ -50,15 +50,13 @@ conan_cmake_autodetect(settings)
 
 conan_cmake_install(PATH_OR_REFERENCE .
         BUILD missing
-        REMOTE jinya.jfrog.io conancenter
+        REMOTE conancenter
         SETTINGS ${settings}
-        SETTINGS ${CONAN_SETTINGS}
-        OPTIONS Poco:enable_netssl_win=True Poco:enable_netssl=False)
+        SETTINGS ${CONAN_SETTINGS})
 
-find_package(libthingy)
 find_package(nlohmann_json)
 find_package(httplib)
 find_package(OpenSSL)
 
 add_executable(thingybrowser main.cpp MainWindow.cpp MainApp.cpp)
-target_link_libraries(thingybrowser PRIVATE OpenSSL::SSL OpenSSL::Crypto  wx::base wx::core httplib::httplib nlohmann_json::nlohmann_json libthingy::libthingy)
+target_link_libraries(thingybrowser PRIVATE OpenSSL::SSL OpenSSL::Crypto wx::base wx::core httplib::httplib nlohmann_json::nlohmann_json libthingy::libthingy)

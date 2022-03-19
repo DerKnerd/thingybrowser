@@ -2,3 +2,6 @@
 	path = libs/wxWidgets
 	url = https://github.com/wxWidgets/wxWidgets.git
 
+[submodule "libs/libthingy"]
+	path = libs/libthingy
+	url = https://github.com/DerKnerd/libthingy.git
