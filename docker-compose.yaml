@@ -1,0 +1,7 @@
+version: "3"
+services:
+  builder:
+    build: .
+    volumes:
+      - .:/thingybrowser
+      - ./out:/out

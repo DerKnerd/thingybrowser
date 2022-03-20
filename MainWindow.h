@@ -13,7 +13,6 @@
 
 #endif
 
-#include <coroutine>
 #include <wx/filesys.h>
 #include <wx/fs_mem.h>
 #include <wx/mstream.h>
@@ -26,22 +25,6 @@
 #else
 #define WXC_FROM_DIP(x) x
 #endif
-struct promise;
-struct coroutine : std::coroutine_handle<promise> {
-    using promise_type = struct promise;
-};
-
-struct promise {
-    coroutine get_return_object() { return {coroutine::from_promise(*this)}; }
-
-    std::suspend_always initial_suspend() noexcept { return {}; }
-
-    std::suspend_never final_suspend() noexcept { return {}; }
-
-    void return_void() {}
-
-    void unhandled_exception() {}
-};
 
 enum MainWindowActions {
     MainWindowActionLoadImage

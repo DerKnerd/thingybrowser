@@ -3,14 +3,6 @@
 //
 
 #include "MainWindow.h"
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#endif
-#ifdef MINGW
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#endif
 #include <libthingy.h>
 
 void MainWindow::loadData(wxCommandEvent &event) {
