@@ -5,8 +5,8 @@ CHOST=$target_host
 AR=/usr/bin/x86_64-w64-mingw32-ar
 AS=/usr/bin/x86_64-w64-mingw32-as
 RANLIB=/usr/bin/x86_64-w64-mingw32-ranlib
-CC=/usr/bin/x86_64-w64-mingw32-gcc
-CXX=/usr/bin/x86_64-w64-mingw32-g++
+CC=/usr/bin/x86_64-w64-mingw32-gcc-posix
+CXX=/usr/bin/x86_64-w64-mingw32-g++-posix
 STRIP=/usr/bin/x86_64-w64-mingw32-strip
 RC=/usr/bin/x86_64-w64-mingw32-windres
 WIN32=1
@@ -19,6 +19,6 @@ arch=x86_64
 compiler=gcc
 
 # Adjust to the gcc version of your MinGW package
-compiler.version=9.3
+compiler.version=10
 compiler.libcxx=libstdc++11
 build_type=Release

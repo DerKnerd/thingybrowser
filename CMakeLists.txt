@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(thingybrowser)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(./ucm.cmake)
 include(./conan.cmake)
@@ -17,10 +19,12 @@ endif ()
 
 set(wxUSE_STL ON)
 set(wxBUILD_SHARED OFF)
-set(USE_AUI 0)
-set(USE_RIBBON 0)
-set(USE_RICHTEXT 0)
-set(USE_XRC 0)
+set(wxUSE_AUI OFF)
+set(wxUSE_RIBBON OFF)
+set(wxUSE_RICHTEXT OFF)
+set(wxUSE_XRC OFF)
+set(wxUSE_ADV OFF)
+set(wxUSE_OPENGL OFF)
 add_subdirectory(libs/wxWidgets)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
@@ -34,7 +38,7 @@ conan_cmake_configure(
         nlohmann_json/3.10.5
         cpp-httplib/0.10.3
         openssl/3.0.1
-        libthingy/0.11@libthingy/libthingy
+        libthingy/0.14@libthingy/libthingy
         GENERATORS cmake_find_package
 )
 
@@ -42,19 +46,21 @@ conan_cmake_autodetect(settings)
 
 if (MINGW)
     conan_cmake_install(PATH_OR_REFERENCE .
-            BUILD missing
+            BUILD all
             REMOTE conan.imanuel.dev
             SETTINGS ${settings}
             PROFILE ${CMAKE_SOURCE_DIR}/linux_to_win64_conan)
 else ()
     conan_cmake_install(PATH_OR_REFERENCE .
-            BUILD missing
+            BUILD all
             REMOTE conan.imanuel.dev
-            SETTINGS ${settings}
-            SETTINGS ${CONAN_SETTINGS})
+            SETTINGS ${settings})
 endif ()
 
+find_package(nlohmann_json)
+find_package(httplib)
+find_package(OpenSSL)
 find_package(libthingy)
 
 add_executable(thingybrowser main.cpp MainWindow.cpp MainApp.cpp)
-target_link_libraries(thingybrowser PRIVATE wx::base wx::core libthingy::libthingy)
+target_link_libraries(thingybrowser PRIVATE wx::base wx::core OpenSSL::SSL OpenSSL::Crypto httplib::httplib nlohmann_json::nlohmann_json libthingy::libthingy)

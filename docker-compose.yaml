@@ -1,7 +1,14 @@
 version: "3"
 services:
-  builder:
-    build: .
+#  builder-mingw:
+#    build:
+#      dockerfile: Dockerfile.mingw
+#    volumes:
+#      - .:/thingybrowser
+#      - ./out:/out
+  builder-ubuntu:
+    build:
+      dockerfile: Dockerfile.ubuntu
     volumes:
       - .:/thingybrowser
       - ./out:/out
