@@ -25,6 +25,7 @@ jobs:
         # excludes node 8 on macOS
         - os: macos-latest
           node: 8
+      fail-fast: false
 
     steps:
     - uses: actions/checkout@v3
