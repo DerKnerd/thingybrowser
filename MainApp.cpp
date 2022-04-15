@@ -3,9 +3,16 @@
 //
 
 #include "MainApp.h"
+#include "settings/thingyverseSettingsPage.h"
 
 MainApp::MainApp() {
+    mainWindow = nullptr;
+    configuration = wxConfigBase::Get();
+    configuration->SetAppName("thingybrowser");
+    configuration->SetVendorName("DerKnerd");
 
+    appSettings = thingybrowserSettings();
+    appSettings.thingyverseApiKey = configuration->Read("/thingy/apikey");
 }
 
 bool MainApp::OnInit() {
@@ -13,10 +20,41 @@ bool MainApp::OnInit() {
         return false;
     }
 
-    SetAppDisplayName(_("Test"));
+    SetAppDisplayName(_("Thingybrowser - Browse the thingiverse"));
     mainWindow = new MainWindow();
 
     SetTopWindow(mainWindow);
 
     return GetTopWindow()->Show();
+}
+
+MainApp *MainApp::getInstance() {
+    auto app = wxApp::GetInstance();
+
+    return dynamic_cast<MainApp *>(app);
+}
+
+void MainApp::ShowPreferencesEditor(wxWindow *parent) {
+    if (!preferenceEditor) {
+        preferenceEditor.reset(new wxPreferencesEditor());
+    }
+
+    preferenceEditor->AddPage(new thingyverseSettingsPage());
+    preferenceEditor->Show(parent);
+}
+
+void MainApp::DismissPreferencesEditor() {
+    if (preferenceEditor) {
+        preferenceEditor->Dismiss();
+    }
+}
+
+void MainApp::UpdateSettings(const thingybrowserSettings &settings) {
+    appSettings = settings;
+    configuration->Write("/thingy/apikey", wxString(appSettings.thingyverseApiKey));
+}
+
+int MainApp::OnExit() {
+    delete wxConfigBase::Set((wxConfigBase *) nullptr);
+    return wxAppBase::OnExit();
 }

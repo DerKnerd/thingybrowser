@@ -16,6 +16,7 @@
 #include <wx/filesys.h>
 #include <wx/fs_mem.h>
 #include <wx/mstream.h>
+#include "wx/vscroll.h"
 
 #ifdef WXC_FROM_DIP
 #undef WXC_FROM_DIP
@@ -27,19 +28,44 @@
 #endif
 
 enum MainWindowActions {
-    MainWindowActionLoadImage
+    MainWindowThingybrowserSettings
 };
 
+class tbThingLoadedEvent : public wxThreadEvent {
+public:
+    tbThingLoadedEvent(int buttonIndex, const wxBitmap &bitmap, const wxString &title);
+
+    int buttonIndex;
+    wxBitmap bitmap;
+    wxString title;
+};
+
+class tbThingPagingDoneEvent : public wxThreadEvent {
+public:
+    explicit tbThingPagingDoneEvent(int newPage, int loadedThings);
+
+    int newPage = -1;
+    int loadedThings = 0;
+};
+
+wxDEFINE_EVENT(tbEVT_THING_LOADED, tbThingLoadedEvent);
+wxDEFINE_EVENT(tbEVT_THING_PAGING_DONE, tbThingPagingDoneEvent);
 
 class MainWindow : public wxFrame {
 private:
-    wxStaticBitmap *sampleImage;
+    unsigned long long page = 1;
+    wxScrolledWindow *thingList;
+    std::vector<wxBitmapButton *> thingTiles;
     wxToolBar *toolbar;
+    wxButton *nextPage;
+    wxButton *previousPage;
 
-    void loadData(wxCommandEvent &event);
+    void handleShow(wxShowEvent &event);
 
 public:
     MainWindow();
+
+    void loadData();
 };
 
 

@@ -5,11 +5,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-include(./ucm.cmake)
-include(./conan.cmake)
+include(building/cmake/ucm.cmake)
+include(conan.cmake)
 
 ucm_set_runtime(STATIC)
 if (WIN32 OR MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static")
     add_compile_definitions(__WXMSW__ _UNICODE)
     set(BUILD_SHARED_LIBS false)
     set(CMAKE_SYSTEM_NAME Windows)
@@ -25,6 +26,7 @@ set(wxUSE_RICHTEXT OFF)
 set(wxUSE_XRC OFF)
 set(wxUSE_ADV OFF)
 set(wxUSE_OPENGL OFF)
+set(LIBTHINGY_SKIP_TESTS ON)
 add_subdirectory(libs/wxWidgets)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
@@ -35,10 +37,7 @@ conan_add_remote(NAME conan.imanuel.dev
 
 conan_cmake_configure(
         REQUIRES
-        nlohmann_json/3.10.5
-        cpp-httplib/0.10.3
-        openssl/3.0.1
-        libthingy/0.14@libthingy/libthingy
+        libthingy/0.18@libthingy/libthingy
         GENERATORS cmake_find_package
 )
 
@@ -46,21 +45,23 @@ conan_cmake_autodetect(settings)
 
 if (MINGW)
     conan_cmake_install(PATH_OR_REFERENCE .
-            BUILD all
+            BUILD missing
             REMOTE conan.imanuel.dev
             SETTINGS ${settings}
-            PROFILE ${CMAKE_SOURCE_DIR}/linux_to_win64_conan)
+            PROFILE ${CMAKE_SOURCE_DIR}/building/conan/linux_to_win64_conan)
 else ()
     conan_cmake_install(PATH_OR_REFERENCE .
-            BUILD all
+            BUILD missing
             REMOTE conan.imanuel.dev
             SETTINGS ${settings})
 endif ()
 
-find_package(nlohmann_json)
-find_package(httplib)
-find_package(OpenSSL)
 find_package(libthingy)
 
-add_executable(thingybrowser main.cpp MainWindow.cpp MainApp.cpp)
-target_link_libraries(thingybrowser PRIVATE wx::base wx::core OpenSSL::SSL OpenSSL::Crypto httplib::httplib nlohmann_json::nlohmann_json libthingy::libthingy)
+add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp)
+include_directories(libs/libthingy)
+if (MINGW)
+    target_link_libraries(thingybrowser PRIVATE wx::base wx::core libthingy::libthingy -static gcc stdc++ winpthread)
+else ()
+    target_link_libraries(thingybrowser PRIVATE wx::base wx::core libthingy::libthingy)
+endif ()

@@ -15,10 +15,16 @@
 #endif
 
 #include "MainWindow.h"
+#include "settings/thingybrowserSettings.h"
+#include "wx/preferences.h"
+#include "wx/confbase.h"
 
 class MainApp : public wxApp {
 private:
     MainWindow *mainWindow;
+    wxScopedPtr<wxPreferencesEditor> preferenceEditor;
+    thingybrowserSettings appSettings;
+    wxConfigBase *configuration;
 
 public:
     MainApp();
@@ -26,6 +32,18 @@ public:
     ~MainApp() override = default;
 
     bool OnInit() override;
+
+    int OnExit() override;
+
+    static MainApp *getInstance();
+
+    void ShowPreferencesEditor(wxWindow *parent);
+
+    void DismissPreferencesEditor();
+
+    const thingybrowserSettings &GetSettings() const { return appSettings; }
+
+    void UpdateSettings(const thingybrowserSettings &settings);
 };
 
 
