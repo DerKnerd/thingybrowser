@@ -7,11 +7,11 @@
 #include "wx/mstream.h"
 #include <libthingy.h>
 
-void ThingsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink) {
+void ThingsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) {
     size_t thingCount = 0;
     try {
         auto client = thingy::ThingiverseClient(apiKey);
-        auto things = client.getThings(page);
+        auto things = client.getThings(page, 20, keyword);
 
         for (auto i = 0; i < things.size(); ++i) {
             auto thing = things.at(i);

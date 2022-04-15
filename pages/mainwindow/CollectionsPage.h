@@ -17,7 +17,7 @@
 
 class CollectionsPage : public tbButtonGridPage {
 public:
-    void internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink) override;
+    void internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) override;
 
     explicit CollectionsPage(wxWindow *parent);
 

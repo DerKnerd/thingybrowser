@@ -13,11 +13,14 @@
 tbButtonGridPage::tbButtonGridPage(wxWindow *parent, wxWindowID winid, const wxPoint &pos, const wxSize &size,
                                    long style, const wxString &name) : tbDataPage(parent, winid, pos, size, style,
                                                                                   name) {
-    auto sizer = new wxFlexGridSizer(2, 0, 5, 5);
+    auto sizer = new wxFlexGridSizer(3, 0, 5, 5);
     this->SetSizer(sizer);
-    sizer->AddGrowableRow(0, 1);
+    sizer->AddGrowableRow(1, 1);
     sizer->AddGrowableCol(0, 1);
     sizer->SetFlexibleDirection(wxHORIZONTAL);
+
+    searchCtrl = new wxSearchCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(WXC_FROM_DIP(400), -1));
+    sizer->Add(searchCtrl, wxSizerFlags().Proportion(1).Expand().Border(wxALL, WXC_FROM_DIP(5)));
 
     auto thingListSizer = new wxWrapSizer(wxHORIZONTAL);
     scrolledWindow = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxVSCROLL);
@@ -61,18 +64,26 @@ tbButtonGridPage::tbButtonGridPage(wxWindow *parent, wxWindowID winid, const wxP
         this->previousPage->Enable(page > 1);
         this->nextPage->Enable(event.loadedThings == 20);
     });
-    scrolledWindow->Bind(wxEVT_SIZE, [this](wxSizeEvent &event) {
+    scrolledWindow->Bind(wxEVT_SIZE, [this](wxSizeEvent &) {
         this->SetVirtualSize(wxSize(this->GetClientSize().x, -1));
     });
-    scrolledWindow->Bind(wxEVT_SCROLL_CHANGED, [this](wxScrollEvent &event) {
+    scrolledWindow->Bind(wxEVT_SCROLL_CHANGED, [this](wxScrollEvent &) {
         this->SetVirtualSize(wxSize(this->GetClientSize().x, -1));
     });
-    previousPage->Bind(wxEVT_BUTTON, [this](wxCommandEvent &event) {
+    previousPage->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) {
         page--;
         loadData();
     });
-    nextPage->Bind(wxEVT_BUTTON, [this](wxCommandEvent &event) {
+    nextPage->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) {
         page++;
+        loadData();
+    });
+    searchCtrl->Bind(wxEVT_SEARCH, [this](wxCommandEvent &event) {
+        keyword = event.GetString();
+        loadData();
+    });
+    searchCtrl->Bind(wxEVT_SEARCH_CANCEL, [this](wxCommandEvent &event) {
+        keyword = "";
         loadData();
     });
 }
@@ -84,9 +95,9 @@ void tbButtonGridPage::loadData() {
         button->Hide();
     }
     auto apiKey = MainApp::getInstance()->GetSettings().thingyverseApiKey;
-    auto th = std::thread([this](int page, const wxString &apiKey, wxEvtHandler *sink) {
-        internalLoad(page, apiKey, sink);
-    }, page, apiKey, this);
+    auto th = std::thread([this](int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) {
+        internalLoad(page, apiKey, sink, keyword);
+    }, page, apiKey, this, keyword);
     th.detach();
 }
 

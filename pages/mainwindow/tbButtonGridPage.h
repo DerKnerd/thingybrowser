@@ -6,6 +6,7 @@
 #define THINGYBROWSER_TBBUTTONGRIDPAGE_H
 
 #include "tbDataPage.h"
+#include "wx/srchctrl.h"
 
 class tbLoadedEvent : public wxThreadEvent {
 public:
@@ -32,10 +33,12 @@ public:
 
 protected:
     unsigned long long page = 1;
+    wxString keyword = "";
     wxScrolledWindow *scrolledWindow;
     std::vector<wxBitmapButton *> tiles;
     wxButton *nextPage;
     wxButton *previousPage;
+    wxSearchCtrl *searchCtrl;
 
 public:
     void loadData();

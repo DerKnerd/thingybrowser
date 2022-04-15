@@ -16,7 +16,7 @@
 
 class tbDataPage : public wxPanel {
 protected:
-    virtual void internalLoad(int page, const wxString& apiKey, wxEvtHandler *sink) = 0;
+    virtual void internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) = 0;
 
 public:
     tbDataPage() = default;

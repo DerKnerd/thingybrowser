@@ -7,11 +7,11 @@
 #include "wx/mstream.h"
 #include "../../helper.h"
 
-void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink) {
+void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) {
     size_t collectionCount = 0;
     try {
         auto client = thingy::ThingiverseClient(apiKey);
-        auto collections = client.getCollections(page);
+        auto collections = client.getCollections(page, 20, keyword);
 
         for (auto i = 0; i < collections.size(); ++i) {
             auto collection = collections.at(i);

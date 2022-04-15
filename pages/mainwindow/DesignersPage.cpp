@@ -7,11 +7,11 @@
 #include "wx/mstream.h"
 #include <libthingy.h>
 
-void DesignersPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink) {
+void DesignersPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) {
     size_t designerCount = 0;
     try {
         auto client = thingy::ThingiverseClient(apiKey);
-        auto users = client.getUsers(page);
+        auto users = client.getUsers(page, 20, keyword);
 
         for (auto i = 0; i < users.size(); ++i) {
             auto user = users.at(i);
