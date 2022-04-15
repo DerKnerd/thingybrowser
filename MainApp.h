@@ -5,12 +5,11 @@
 #ifndef THINGYBROWSER_MAINAPP_H
 #define THINGYBROWSER_MAINAPP_H
 
-
-#include <wx/wxprec.h>
+#include "wx/wxprec.h"
 
 #ifndef WX_PRECOMP
 
-#include <wx/wx.h>
+#include "wx/wx.h"
 
 #endif
 

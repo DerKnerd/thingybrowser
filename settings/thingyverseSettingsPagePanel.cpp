@@ -5,6 +5,7 @@
 #include "thingyverseSettingsPagePanel.h"
 #include "../MainApp.h"
 #include "wx/hyperlink.h"
+#include "../helper.h"
 
 thingyverseSettingsPagePanel::thingyverseSettingsPagePanel(wxWindow *parent) : wxPanel(parent) {
     auto apiKeyLabel = new wxStaticText(this, wxID_ANY, _("Thingyverse API key"));

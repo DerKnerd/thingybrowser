@@ -4,6 +4,8 @@
 
 #include "MainApp.h"
 #include "settings/thingyverseSettingsPage.h"
+#include "wx/filesys.h"
+#include "wx/fs_mem.h"
 
 MainApp::MainApp() {
     mainWindow = nullptr;
@@ -20,6 +22,8 @@ bool MainApp::OnInit() {
         return false;
     }
 
+    wxInitAllImageHandlers();
+    wxFileSystem::AddHandler(new wxMemoryFSHandler());
     SetAppDisplayName(_("Thingybrowser - Browse the thingiverse"));
     mainWindow = new MainWindow();
 
@@ -52,6 +56,7 @@ void MainApp::DismissPreferencesEditor() {
 void MainApp::UpdateSettings(const thingybrowserSettings &settings) {
     appSettings = settings;
     configuration->Write("/thingy/apikey", wxString(appSettings.thingyverseApiKey));
+    mainWindow->loadData();
 }
 
 int MainApp::OnExit() {

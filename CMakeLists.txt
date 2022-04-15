@@ -37,7 +37,7 @@ conan_add_remote(NAME conan.imanuel.dev
 
 conan_cmake_configure(
         REQUIRES
-        libthingy/0.18@libthingy/libthingy
+        libthingy/0.19@libthingy/libthingy
         GENERATORS cmake_find_package
 )
 
@@ -58,7 +58,7 @@ endif ()
 
 find_package(libthingy)
 
-add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp)
+add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp pages/mainwindow/ThingsPage.cpp pages/mainwindow/ThingsPage.h helper.h pages/mainwindow/tbDataPage.h pages/mainwindow/tbButtonGridPage.cpp pages/mainwindow/tbButtonGridPage.h pages/mainwindow/CollectionsPage.cpp pages/mainwindow/CollectionsPage.h pages/mainwindow/DesignersPage.cpp pages/mainwindow/DesignersPage.h)
 include_directories(libs/libthingy)
 if (MINGW)
     target_link_libraries(thingybrowser PRIVATE wx::base wx::core libthingy::libthingy -static gcc stdc++ winpthread)
