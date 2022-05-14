@@ -7,6 +7,7 @@
 #include "pages/mainwindow/tbDataPage.h"
 #include "pages/mainwindow/CollectionsPage.h"
 #include "pages/mainwindow/DesignersPage.h"
+#include "things/ThingsWindow.h"
 
 MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse the thingiverse"), wxDefaultPosition,
                                    wxSize(1280, 800), wxDEFAULT_FRAME_STYLE | wxCLIP_CHILDREN) {
@@ -23,7 +24,11 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
     fileMenu->AppendSeparator();
     fileMenu->Append(wxID_EXIT, _("Exit"));
 
+    auto thingMenu = new wxMenu();
+    thingMenu->Append(MainWindowActions::MainWindowOpenThingById, _("Open thing by id"));
+
     menuBar->Append(fileMenu, _("File"));
+    menuBar->Append(thingMenu, _("Things"));
 
     auto panel = new wxPanel(this, wxID_ANY);
     auto sizer = new wxBoxSizer(wxVERTICAL);
@@ -54,6 +59,16 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
     Bind(wxEVT_MENU, [this](wxCommandEvent &) {
         MainApp::getInstance()->ShowPreferencesEditor(this);
     }, MainWindowThingybrowserSettings);
+    Bind(wxEVT_MENU, [this](wxCommandEvent &) {
+        auto dialog = wxTextEntryDialog(this, "", _("Please enter a thing ID"), "", wxOK | wxCANCEL);
+        dialog.SetTextValidator(wxFILTER_DIGITS);
+        if (dialog.ShowModal() == wxID_OK) {
+            unsigned long long thingId = 0;
+            dialog.GetValue().ToULongLong(&thingId);
+            auto window = new ThingsWindow(this, thingId);
+            window->Show();
+        }
+    }, MainWindowOpenThingById);
     contentNotebook->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, [this](wxCommandEvent &) {
         if (contentNotebook->GetSelection() != -1) {
             auto page = dynamic_cast<tbButtonGridPage *>(contentNotebook->GetPage(contentNotebook->GetSelection()));

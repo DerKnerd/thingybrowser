@@ -17,7 +17,8 @@
 #include "pages/mainwindow/ThingsPage.h"
 
 enum MainWindowActions {
-    MainWindowThingybrowserSettings
+    MainWindowThingybrowserSettings,
+    MainWindowOpenThingById
 };
 
 class MainWindow : public wxFrame {
