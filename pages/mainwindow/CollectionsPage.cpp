@@ -31,7 +31,7 @@ void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandle
             auto bmp = wxBitmap(
                     img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)),
                                                                         wxDefaultPosition));
-            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, collection.name));
+            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, collection.name, collection.id));
         }
         collectionCount = collections.size();
     } catch (thingy::ThingiverseException &e) {
@@ -42,8 +42,9 @@ void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandle
     wxQueueEvent(sink, new tbPagingDoneEvent(collectionCount));
 }
 
-CollectionsPage::CollectionsPage(wxWindow *parent) : tbButtonGridPage(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0,
-                                                            _("Collections")) {
+CollectionsPage::CollectionsPage(wxWindow *parent) : tbButtonGridPage(parent, wxID_ANY, wxDefaultPosition,
+                                                                      wxDefaultSize, 0,
+                                                                      _("Collections")) {
 }
 
 void CollectionsPage::handleClick(int idx) {

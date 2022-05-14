@@ -31,7 +31,7 @@ void DesignersPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler 
             auto bmp = wxBitmap(
                     img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)),
                                                                         wxDefaultPosition));
-            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, user.fullName));
+            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, user.fullName, user.id));
         }
         designerCount = users.size();
     } catch (thingy::ThingiverseException &e) {

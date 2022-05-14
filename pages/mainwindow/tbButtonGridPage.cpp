@@ -30,6 +30,7 @@ tbButtonGridPage::tbButtonGridPage(wxWindow *parent, wxWindowID winid, const wxP
     sizer->Add(scrolledWindow, wxSizerFlags().Proportion(1).Expand().Border(wxALL, WXC_FROM_DIP(5)));
 
     tiles = std::vector<wxBitmapButton *>(20);
+    ids = std::vector<unsigned long long>(20);
     for (auto i = 0; i < 20; ++i) {
         tiles[i] = new wxBitmapButton(scrolledWindow, wxID_ANY, wxNullBitmap, wxDefaultPosition,
                                       wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)));
@@ -39,6 +40,9 @@ tbButtonGridPage::tbButtonGridPage(wxWindow *parent, wxWindowID winid, const wxP
                 .Border(wxALL, WXC_FROM_DIP(5))
                 .ReserveSpaceEvenIfHidden());
         tiles[i]->Hide();
+        tiles[i]->Bind(wxEVT_BUTTON, [this, i](wxCommandEvent &) {
+            this->handleClick(i);
+        });
     }
     scrolledWindow->SetVirtualSize(wxSize(GetClientSize().x, WXC_FROM_DIP(240) * 4 + WXC_FROM_DIP(5) * 3));
 
@@ -58,6 +62,7 @@ tbButtonGridPage::tbButtonGridPage(wxWindow *parent, wxWindowID winid, const wxP
     Bind(tbEVT_LOADED, [this](tbLoadedEvent &event) {
         this->tiles[event.buttonIndex]->SetBitmap(event.bitmap);
         this->tiles[event.buttonIndex]->SetLabel(event.title);
+        this->ids[event.buttonIndex] = event.id;
         this->tiles[event.buttonIndex]->Show();
     });
     Bind(tbEVT_PAGING_DONE, [this](tbPagingDoneEvent &event) {
@@ -101,11 +106,8 @@ void tbButtonGridPage::loadData() {
     th.detach();
 }
 
-tbLoadedEvent::tbLoadedEvent(int buttonIndex, const wxBitmap &bitmap, const wxString &title) : buttonIndex(buttonIndex),
-                                                                                               bitmap(bitmap),
-                                                                                               title(title),
-                                                                                               wxThreadEvent(
-                                                                                                       tbEVT_LOADED) {}
+tbLoadedEvent::tbLoadedEvent(int buttonIndex, const wxBitmap &bitmap, const wxString &title, unsigned long long id)
+        : buttonIndex(buttonIndex), bitmap(bitmap), title(title), id(id), wxThreadEvent(tbEVT_LOADED) {}
 
 tbPagingDoneEvent::tbPagingDoneEvent(size_t loadedThings) : loadedThings(loadedThings),
                                                             wxThreadEvent(tbEVT_PAGING_DONE) {}

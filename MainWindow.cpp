@@ -9,8 +9,7 @@
 #include "pages/mainwindow/DesignersPage.h"
 
 MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse the thingiverse"), wxDefaultPosition,
-                                   wxSize(1280, 800),
-                                   wxDEFAULT_FRAME_STYLE | wxCLIP_CHILDREN) {
+                                   wxSize(1280, 800), wxDEFAULT_FRAME_STYLE | wxCLIP_CHILDREN) {
     toolbar = CreateToolBar(wxTB_HORIZONTAL | wxTB_HORZ_LAYOUT | wxTB_TEXT | wxTB_NOICONS);
     toolbar->Realize();
 

@@ -6,6 +6,7 @@
 #include "settings/thingyverseSettingsPage.h"
 #include "wx/filesys.h"
 #include "wx/fs_mem.h"
+#include "wx/fs_inet.h"
 
 MainApp::MainApp() {
     mainWindow = nullptr;
@@ -24,6 +25,7 @@ bool MainApp::OnInit() {
 
     wxInitAllImageHandlers();
     wxFileSystem::AddHandler(new wxMemoryFSHandler());
+    wxFileSystem::AddHandler(new wxInternetFSHandler());
     SetAppDisplayName(_("Thingybrowser - Browse the thingiverse"));
     mainWindow = new MainWindow();
 

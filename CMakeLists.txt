@@ -20,13 +20,11 @@ endif ()
 
 set(wxUSE_STL ON)
 set(wxBUILD_SHARED OFF)
-set(wxUSE_AUI OFF)
-set(wxUSE_RIBBON OFF)
-set(wxUSE_RICHTEXT OFF)
-set(wxUSE_XRC OFF)
-set(wxUSE_ADV OFF)
-set(wxUSE_OPENGL OFF)
-set(LIBTHINGY_SKIP_TESTS ON)
+set(wxUSE_ZLIB builtin)
+set(wxUSE_EXPAT builtin)
+set(wxUSE_LIBJPEG builtin)
+set(wxUSE_LIBPNG builtin)
+set(wxUSE_LIBTIFF builtin)
 add_subdirectory(libs/wxWidgets)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
@@ -37,7 +35,11 @@ conan_add_remote(NAME conan.imanuel.dev
 
 conan_cmake_configure(
         REQUIRES
-        libthingy/0.19@libthingy/libthingy
+        libthingy/0.23@libthingy/libthingy
+        cpp-httplib/0.10.6
+        nlohmann_json/3.10.5
+        boost/1.78.0
+        zlib/1.2.12
         GENERATORS cmake_find_package
 )
 
@@ -58,10 +60,10 @@ endif ()
 
 find_package(libthingy)
 
-add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp pages/mainwindow/ThingsPage.cpp pages/mainwindow/ThingsPage.h helper.h pages/mainwindow/tbDataPage.h pages/mainwindow/tbButtonGridPage.cpp pages/mainwindow/tbButtonGridPage.h pages/mainwindow/CollectionsPage.cpp pages/mainwindow/CollectionsPage.h pages/mainwindow/DesignersPage.cpp pages/mainwindow/DesignersPage.h)
+add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp pages/mainwindow/ThingsPage.cpp pages/mainwindow/ThingsPage.h helper.h pages/mainwindow/tbDataPage.h pages/mainwindow/tbButtonGridPage.cpp pages/mainwindow/tbButtonGridPage.h pages/mainwindow/CollectionsPage.cpp pages/mainwindow/CollectionsPage.h pages/mainwindow/DesignersPage.cpp pages/mainwindow/DesignersPage.h things/ThingsWindow.cpp things/ThingsWindow.h helpers/font.h helpers/tbNoLinkHtmlWindow.h)
 include_directories(libs/libthingy)
 if (MINGW)
-    target_link_libraries(thingybrowser PRIVATE wx::base wx::core libthingy::libthingy -static gcc stdc++ winpthread)
+    target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net wx::richtext libthingy::libthingy httplib::httplib -static gcc stdc++ winpthread)
 else ()
-    target_link_libraries(thingybrowser PRIVATE wx::base wx::core libthingy::libthingy)
+    target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net wx::richtext libthingy::libthingy httplib::httplib)
 endif ()

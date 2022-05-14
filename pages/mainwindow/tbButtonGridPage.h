@@ -10,11 +10,12 @@
 
 class tbLoadedEvent : public wxThreadEvent {
 public:
-    tbLoadedEvent(int buttonIndex, const wxBitmap &bitmap, const wxString &title);
+    tbLoadedEvent(int buttonIndex, const wxBitmap &bitmap, const wxString &title, unsigned long long id);
 
     int buttonIndex;
     wxBitmap bitmap;
     wxString title;
+    unsigned long long id;
 };
 
 class tbPagingDoneEvent : public wxThreadEvent {
@@ -39,6 +40,7 @@ protected:
     wxButton *nextPage;
     wxButton *previousPage;
     wxSearchCtrl *searchCtrl;
+    std::vector<unsigned long long> ids;
 
 public:
     void loadData();

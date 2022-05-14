@@ -5,13 +5,14 @@
 #include "ThingsPage.h"
 #include "../../helper.h"
 #include "wx/mstream.h"
+#include "../../things/ThingsWindow.h"
 #include <libthingy.h>
 
 void ThingsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) {
     size_t thingCount = 0;
     try {
         auto client = thingy::ThingiverseClient(apiKey);
-        auto things = client.getThings(page, 20, keyword);
+        auto things = client.getThings(page, 20, keyword, thingy::SortBy::Popular);
 
         for (auto i = 0; i < things.size(); ++i) {
             auto thing = things.at(i);
@@ -31,7 +32,7 @@ void ThingsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *si
             auto bmp = wxBitmap(
                     img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)),
                                                                         wxDefaultPosition));
-            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, thing.name));
+            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, thing.name, thing.id));
         }
         thingCount = things.size();
     } catch (thingy::ThingiverseException &e) {
@@ -47,4 +48,7 @@ ThingsPage::ThingsPage(wxWindow *parent) : tbButtonGridPage(parent, wxID_ANY, wx
 }
 
 void ThingsPage::handleClick(int idx) {
+    auto thingId = ids[idx];
+    auto window = new ThingsWindow(this, thingId);
+    window->Show();
 }
