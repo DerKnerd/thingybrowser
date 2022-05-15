@@ -25,7 +25,6 @@ class MainWindow : public wxFrame {
 private:
     wxToolBar *toolbar;
     wxNotebook *contentNotebook;
-    ThingsPage *thingPage;
 
     void handleShow(wxShowEvent &event);
 

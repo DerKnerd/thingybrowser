@@ -14,6 +14,8 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
     toolbar = CreateToolBar(wxTB_HORIZONTAL | wxTB_HORZ_LAYOUT | wxTB_TEXT | wxTB_NOICONS);
     toolbar->Realize();
 
+    toolbar->AddTool(MainWindowActions::MainWindowOpenThingById, _("Open thing by id"), wxNullBitmap);
+
     auto menuBar = new wxMenuBar();
     this->SetMenuBar(menuBar);
 

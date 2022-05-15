@@ -49,6 +49,6 @@ ThingsPage::ThingsPage(wxWindow *parent) : tbButtonGridPage(parent, wxID_ANY, wx
 
 void ThingsPage::handleClick(int idx) {
     auto thingId = ids[idx];
-    auto window = new ThingsWindow(this, thingId);
+    auto window = new ThingsWindow(nullptr, thingId);
     window->Show();
 }

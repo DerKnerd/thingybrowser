@@ -6,6 +6,7 @@
 #include "CollectionsPage.h"
 #include "wx/mstream.h"
 #include "../../helper.h"
+#include "../../collections/CollectionsWindow.h"
 
 void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) {
     size_t collectionCount = 0;
@@ -32,6 +33,7 @@ void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandle
                     img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)),
                                                                         wxDefaultPosition));
             wxQueueEvent(sink, new tbLoadedEvent(i, bmp, collection.name, collection.id));
+            collectionItemCount.emplace_back(collection.count);
         }
         collectionCount = collections.size();
     } catch (thingy::ThingiverseException &e) {
@@ -48,4 +50,7 @@ CollectionsPage::CollectionsPage(wxWindow *parent) : tbButtonGridPage(parent, wx
 }
 
 void CollectionsPage::handleClick(int idx) {
+    auto collectionId = ids[idx];
+    auto window = new CollectionsWindow(nullptr, collectionId, tiles[idx]->GetLabel().ToStdString(), collectionItemCount[idx]);
+    window->Show();
 }

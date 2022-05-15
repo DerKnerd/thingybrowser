@@ -23,6 +23,7 @@ public:
 
 private:
     void handleClick(int idx) override;
+    std::vector<unsigned long long> collectionItemCount;
 };
 
 
