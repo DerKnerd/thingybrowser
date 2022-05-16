@@ -32,7 +32,7 @@ void ThingsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *si
             auto bmp = wxBitmap(
                     img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)),
                                                                         wxDefaultPosition));
-            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, thing.name, thing.id));
+            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, thing.name + _(" by ") + thing.creator.username, thing.id));
         }
         thingCount = things.size();
     } catch (thingy::ThingiverseException &e) {

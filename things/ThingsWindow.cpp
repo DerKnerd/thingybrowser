@@ -68,38 +68,44 @@ ThingsWindow::ThingsWindow(wxWindow *parent, unsigned long long thingId) : wxFra
                 downloadProgress = new wxProgressDialog(_("Download progress"), _("Downloading files"), 100, this);
                 std::thread([](wxWindow *sink, const unsigned long long id, const std::string &path,
                                const std::string &apiKey) {
+                    if (!wxFileName::Mkdir(path, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
+                        wxQueueEvent(sink, new twLogMessageEvent("Failed to download file"));
+                        return;
+                    }
                     auto files = thingy::ThingiverseClient(apiKey).getFilesByThing(id);
                     for (const auto &file: files) {
-                        wxQueueEvent(sink, new twFilesCountedEvent(std::count_if(files.begin(), files.end(),
-                                                                                 [](const thingy::entities::File& file) {
-                                                                                     return !file.directUrl.empty();
-                                                                                 })));
-                        if (file.directUrl.empty()) { continue; }
-                        wxQueueEvent(sink, new twFileDownloadingEvent("Downloading file " + file.name));
-                        auto client = httplib::Client("https://cdn.thingiverse.com");
-                        client.set_read_timeout(5 * 60);
-                        client.set_connection_timeout(5 * 60);
-                        auto url = std::string(file.directUrl);
-                        auto response = client.Get(url.c_str());
+                        try {
+                            wxQueueEvent(sink, new twFilesCountedEvent(std::count_if(files.begin(), files.end(),
+                                                                                     [](const thingy::entities::File &file) {
+                                                                                         return !file.directUrl.empty();
+                                                                                     })));
+                            if (file.directUrl.empty()) { continue; }
+                            wxQueueEvent(sink, new twFileDownloadingEvent("Downloading file " + file.name));
+                            auto client = httplib::Client("https://cdn.thingiverse.com");
+                            client.set_read_timeout(5 * 60);
+                            client.set_connection_timeout(5 * 60);
+                            auto url = std::string(file.directUrl);
+                            auto response = client.Get(url.c_str());
 
-                        if (response.error() != httplib::Error::Success) {
+                            if (response.error() != httplib::Error::Success) {
+                                wxQueueEvent(sink, new twLogMessageEvent("Failed to download file"));
+                                return;
+                            }
+                            auto finalPath = wxString(path).Append("/").Append(file.name);
+                            auto outputFile = wxFile();
+                            if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
+                                  outputFile.Open(finalPath, wxFile::write))) {
+                                wxQueueEvent(sink, new twLogMessageEvent("Failed to download file"));
+                                return;
+                            }
+                            if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
+                                  outputFile.Flush() && outputFile.Close())) {
+                                wxQueueEvent(sink, new twLogMessageEvent("Failed to download file"));
+                            } else {
+                                wxQueueEvent(sink, new twLogMessageEvent("Saved thing file " + file.name));
+                            }
+                        } catch (thingy::ThingiverseException &exception) {
                             wxQueueEvent(sink, new twLogMessageEvent("Failed to download file"));
-                            return;
-                        }
-                        if (!wxFileName::Mkdir(path, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
-                            wxQueueEvent(sink, new twLogMessageEvent("Failed to download file"));
-                            return;
-                        }
-                        auto finalPath = wxString(path).Append(file.name);
-                        auto outputFile = wxFile();
-                        if (!(outputFile.Create(finalPath) && outputFile.Open(finalPath))) {
-                            wxQueueEvent(sink, new twLogMessageEvent("Failed to download file"));
-                            return;
-                        }
-                        if (!(outputFile.Write(response->body) && outputFile.Flush() && outputFile.Close())) {
-                            wxQueueEvent(sink, new twLogMessageEvent("Failed to download file"));
-                        } else {
-                            wxQueueEvent(sink, new twLogMessageEvent("Saved thing file " + file.name));
                         }
                         wxQueueEvent(sink, new twFileDownloadedEvent("Downloaded file " + file.name));
                     }
@@ -181,9 +187,11 @@ ThingsWindow::ThingsWindow(wxWindow *parent, unsigned long long thingId) : wxFra
 
 void ThingsWindow::displayThing() {
     toolbar->EnableTool(ThingsWindowActions::ThingsWindowDownloadThing, true);
-    SetTitle(thing.name);
-    title->SetLabel(thing.name);
     details->SetPage(thing.detailsHtml + thing.descriptionHtml + thing.instructionsHtml);
+    title->SetLabel(thing.name + _(" by ") + thing.creator.username);
+    this->SetTitle(thing.name + _(" by ") + thing.creator.username);
+    toolbar->AddTool(ThingsWindowActions::ThingsWindowGoToDesigner, _("More from ") + thing.creator.username,
+                     wxNullBitmap);
 }
 
 twThingLoadedEvent::twThingLoadedEvent(thingy::entities::Thing thing) : thing(std::move(thing)),

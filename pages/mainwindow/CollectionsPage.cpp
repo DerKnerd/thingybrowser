@@ -32,7 +32,7 @@ void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandle
             auto bmp = wxBitmap(
                     img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)),
                                                                         wxDefaultPosition));
-            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, collection.name, collection.id));
+            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, collection.name + _(" by ") + collection.creator.username, collection.id));
             collectionItemCount.emplace_back(collection.count);
         }
         collectionCount = collections.size();
@@ -51,6 +51,7 @@ CollectionsPage::CollectionsPage(wxWindow *parent) : tbButtonGridPage(parent, wx
 
 void CollectionsPage::handleClick(int idx) {
     auto collectionId = ids[idx];
-    auto window = new CollectionsWindow(nullptr, collectionId, tiles[idx]->GetLabel().ToStdString(), collectionItemCount[idx]);
+    auto window = new CollectionsWindow(nullptr, collectionId, tiles[idx]->GetLabel().ToStdString(),
+                                        collectionItemCount[idx]);
     window->Show();
 }

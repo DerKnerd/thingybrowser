@@ -24,6 +24,7 @@
 
 enum ThingsWindowActions {
     ThingsWindowDownloadThing,
+    ThingsWindowGoToDesigner,
 };
 
 class twThingLoadedEvent : public wxThreadEvent {

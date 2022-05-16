@@ -17,6 +17,13 @@
 #include "wx/gbsizer.h"
 #include "wx/progdlg.h"
 
+class cwCollectionLoadedEvent : public wxThreadEvent {
+public:
+    explicit cwCollectionLoadedEvent(thingy::entities::Collection collection);
+
+    thingy::entities::Collection collection;
+};
+
 class cwThingLoadedEvent : public wxThreadEvent {
 public:
     explicit cwThingLoadedEvent(int buttonIndex, const wxBitmap &bitmap, const wxString &title, unsigned long long id);
@@ -53,6 +60,7 @@ public:
     std::string message;
 };
 
+wxDEFINE_EVENT(cwEVT_COLLECTION_LOADED, cwCollectionLoadedEvent);
 wxDEFINE_EVENT(cwEVT_THING_LOADED, cwThingLoadedEvent);
 wxDEFINE_EVENT(cwEVT_THINGS_LOADED, cwThingsLoadedEvent);
 wxDEFINE_EVENT(cwEVT_LOG_MESSAGE, cwLogMessageEvent);
@@ -61,6 +69,7 @@ wxDEFINE_EVENT(cwEVT_THING_DOWLOADING, cwThingDownloadingEvent);
 
 enum CollectionsWindowActions {
     CollectionsWindowDownloadThings,
+    CollectionsWindowGoToDesigner,
 };
 
 class CollectionsWindow : public wxFrame {

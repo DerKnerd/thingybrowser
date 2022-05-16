@@ -79,6 +79,10 @@ CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int co
         ids[idx] = id;
         thingButtons[idx]->Show();
     });
+    Bind(cwEVT_COLLECTION_LOADED, [this](const cwCollectionLoadedEvent &event) {
+        toolbar->AddTool(CollectionsWindowGoToDesigner, _("More from ") + event.collection.creator.username,
+                         wxNullBitmap);
+    });
     Bind(cwEVT_LOG_MESSAGE, [this](cwLogMessageEvent &event) {
         GetStatusBar()->SetStatusText(event.message);
     });
@@ -138,11 +142,13 @@ CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int co
                             }
                             auto finalPath = wxString(thingPath).Append(file.name);
                             auto outputFile = wxFile();
-                            if (!(outputFile.Create(finalPath) && outputFile.Open(finalPath))) {
+                            if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
+                                  outputFile.Open(finalPath, wxFile::write))) {
                                 wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
                                 return;
                             }
-                            if (!(outputFile.Write(response->body) && outputFile.Flush() && outputFile.Close())) {
+                            if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
+                                  outputFile.Flush() && outputFile.Close())) {
                                 wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
                             } else {
                                 wxQueueEvent(sink, new cwLogMessageEvent("Saved thing file " + file.name));
@@ -178,7 +184,8 @@ CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int co
                 }
                 auto bmp = wxBitmap(img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(
                         wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)), wxDefaultPosition));
-                wxQueueEvent(sink, new cwThingLoadedEvent(i, bmp, thing.name, thing.id));
+                wxQueueEvent(sink,
+                             new cwThingLoadedEvent(i, bmp, thing.name, thing.id));
             }
             wxQueueEvent(sink, new cwThingsLoadedEvent());
         } catch (thingy::ThingiverseException &e) {
@@ -186,6 +193,11 @@ CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int co
         } catch (std::exception &e) {
             wxQueueEvent(sink, new cwLogMessageEvent(e.what()));
         }
+    }, this, collectionId, apiKey).detach();
+    std::thread([](wxEvtHandler *sink, unsigned long long collectionId, const std::string &apiKey) {
+        auto client = thingy::ThingiverseClient(apiKey);
+        auto collection = client.getCollection(collectionId);
+        wxQueueEvent(sink, new cwCollectionLoadedEvent(collection));
     }, this, collectionId, apiKey).detach();
 }
 
@@ -203,3 +215,8 @@ cwThingDownloadingEvent::cwThingDownloadingEvent(std::string message) : wxThread
                                                                         message(std::move(message)) {}
 
 cwThingsLoadedEvent::cwThingsLoadedEvent() : wxThreadEvent(cwEVT_THINGS_LOADED) {}
+
+cwCollectionLoadedEvent::cwCollectionLoadedEvent(thingy::entities::Collection collection) : collection(
+        std::move(collection)),
+                                                                                            wxThreadEvent(
+                                                                                                    cwEVT_COLLECTION_LOADED) {}
