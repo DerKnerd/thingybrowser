@@ -1,3 +1,4 @@
 [submodule "libs/wxWidgets"]
 	path = libs/wxWidgets
 	url = https://github.com/wxWidgets/wxWidgets.git
+	branch = v3.1.6

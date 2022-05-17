@@ -12,21 +12,11 @@ env:
   CONAN_REVISIONS_ENABLED: 1
 
 jobs:
-  build:
+  build-macos:
     # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
     # You can convert this to a matrix build if you need cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-21.10]
-        node: [8, 10, 12, 14]
-        exclude:
-        # excludes node 8 on macOS
-        - os: macos-latest
-          node: 8
-      fail-fast: false
-
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
 
@@ -44,3 +34,9 @@ jobs:
     - name: Build
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Upload Artefact
+      uses: actions/upload-artifact@v2
+      with:
+        name: thingybrowser
+        path: ${{github.workspace}}/build/thingybrowser

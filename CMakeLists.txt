@@ -16,6 +16,8 @@ if (WIN32 OR MINGW)
     set(CMAKE_SYSTEM_NAME Windows)
     set(CMAKE_SYSTEM_PROCESSOR x86_64)
     set(CMAKE_WIN32_EXECUTABLE 1)
+    set(CMAKE_CXX_COMPILER_WORKS TRUE)
+    set(CMAKE_C_COMPILER_WORKS TRUE)
 endif ()
 
 set(wxUSE_STL ON)
@@ -35,23 +37,21 @@ conan_add_remote(NAME conan.imanuel.dev
 
 conan_cmake_configure(
         REQUIRES
-        libthingy/0.25@libthingy/libthingy
-        cpp-httplib/0.10.6
+        openssl/1.1.1c
+        libthingy/0.28@libthingy/libthingy
+        cpp-httplib/0.10.3
         nlohmann_json/3.10.5
-        boost/1.78.0
-        zlib/1.2.12
         GENERATORS cmake_find_package
 )
 
-conan_cmake_autodetect(settings)
 
 if (MINGW)
     conan_cmake_install(PATH_OR_REFERENCE .
             BUILD missing
             REMOTE conan.imanuel.dev
-            SETTINGS ${settings}
             PROFILE ${CMAKE_SOURCE_DIR}/building/conan/linux_to_win64_conan)
 else ()
+    conan_cmake_autodetect(settings)
     conan_cmake_install(PATH_OR_REFERENCE .
             BUILD missing
             REMOTE conan.imanuel.dev
@@ -63,7 +63,7 @@ find_package(libthingy)
 add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp pages/mainwindow/ThingsPage.cpp pages/mainwindow/ThingsPage.h helper.h pages/mainwindow/tbDataPage.h pages/mainwindow/tbButtonGridPage.cpp pages/mainwindow/tbButtonGridPage.h pages/mainwindow/CollectionsPage.cpp pages/mainwindow/CollectionsPage.h pages/mainwindow/DesignersPage.cpp pages/mainwindow/DesignersPage.h things/ThingsWindow.cpp things/ThingsWindow.h helpers/font.h helpers/tbNoLinkHtmlWindow.h collections/CollectionsWindow.cpp)
 include_directories(libs/libthingy)
 if (MINGW)
-    target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net libthingy::libthingy httplib::httplib -static gcc stdc++ winpthread)
+    target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net libthingy::libthingy httplib::httplib)
 else ()
     target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net libthingy::libthingy httplib::httplib)
 endif ()
