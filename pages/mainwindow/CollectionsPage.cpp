@@ -32,7 +32,9 @@ void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandle
             auto bmp = wxBitmap(
                     img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)),
                                                                         wxDefaultPosition));
-            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, collection.name + _(" by ") + collection.creator.username, collection.id));
+            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, "#" + std::to_string(collection.id) + " - " + collection.name +
+                                                         _(" by ") + collection.creator.username,
+                                                 collection.id));
             collectionItemCount.emplace_back(collection.count);
         }
         collectionCount = collections.size();
@@ -45,8 +47,7 @@ void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandle
 }
 
 CollectionsPage::CollectionsPage(wxWindow *parent) : tbButtonGridPage(parent, wxID_ANY, wxDefaultPosition,
-                                                                      wxDefaultSize, 0,
-                                                                      _("Collections")) {
+                                                                      wxDefaultSize, 0, _("Collections")) {
 }
 
 void CollectionsPage::handleClick(int idx) {

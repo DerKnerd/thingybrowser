@@ -38,7 +38,7 @@ conan_add_remote(NAME conan.imanuel.dev
 conan_cmake_configure(
         REQUIRES
         openssl/1.1.1c
-        libthingy/0.28@libthingy/libthingy
+        libthingy/0.29@libthingy/libthingy
         cpp-httplib/0.10.3
         nlohmann_json/3.10.5
         GENERATORS cmake_find_package
