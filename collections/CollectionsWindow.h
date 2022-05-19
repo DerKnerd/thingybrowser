@@ -70,12 +70,12 @@ wxDEFINE_EVENT(cwEVT_THING_DOWLOADING, cwThingDownloadingEvent);
 enum CollectionsWindowActions {
     CollectionsWindowDownloadThings,
     CollectionsWindowGoToDesigner,
+    CollectionsWindowOpenOnThingiverse,
 };
 
 class CollectionsWindow : public wxFrame {
 public:
-    CollectionsWindow(wxWindow *parent, unsigned long long int collectionId, const std::string &title,
-                      unsigned long long int thingCount);
+    CollectionsWindow(wxWindow *parent, unsigned long long int collectionId, unsigned long long int thingCount);
 
 private:
     wxToolBar *toolbar;

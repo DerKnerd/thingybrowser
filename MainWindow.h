@@ -18,7 +18,9 @@
 
 enum MainWindowActions {
     MainWindowThingybrowserSettings,
-    MainWindowOpenThingById
+    MainWindowOpenThingById,
+    MainWindowOpenThingByUrl,
+    MainWindowOpenCollectionById,
 };
 
 class MainWindow : public wxFrame {

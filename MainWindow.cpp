@@ -8,13 +8,16 @@
 #include "pages/mainwindow/CollectionsPage.h"
 #include "pages/mainwindow/DesignersPage.h"
 #include "things/ThingsWindow.h"
+#include "collections/CollectionsWindow.h"
 
 MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse the thingiverse"), wxDefaultPosition,
                                    wxSize(1280, 800), wxDEFAULT_FRAME_STYLE | wxCLIP_CHILDREN) {
     toolbar = CreateToolBar(wxTB_HORIZONTAL | wxTB_HORZ_LAYOUT | wxTB_TEXT | wxTB_NOICONS);
-    toolbar->Realize();
-
     toolbar->AddTool(MainWindowActions::MainWindowOpenThingById, _("Open thing by id"), wxNullBitmap);
+    toolbar->AddTool(MainWindowActions::MainWindowOpenThingByUrl, _("Open thing by URL"), wxNullBitmap);
+    toolbar->AddSeparator();
+    toolbar->AddTool(MainWindowActions::MainWindowOpenCollectionById, _("Open collection by id"), wxNullBitmap);
+    toolbar->Realize();
 
     auto menuBar = new wxMenuBar();
     this->SetMenuBar(menuBar);
@@ -28,9 +31,14 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
 
     auto thingMenu = new wxMenu();
     thingMenu->Append(MainWindowActions::MainWindowOpenThingById, _("Open thing by id"));
+    thingMenu->Append(MainWindowActions::MainWindowOpenThingByUrl, _("Open thing by URL"));
+
+    auto collectionMenu = new wxMenu();
+    collectionMenu->Append(MainWindowActions::MainWindowOpenCollectionById, _("Open collection by id"));
 
     menuBar->Append(fileMenu, _("File"));
     menuBar->Append(thingMenu, _("Things"));
+    menuBar->Append(collectionMenu, _("Collections"));
 
     auto panel = new wxPanel(this, wxID_ANY);
     auto sizer = new wxBoxSizer(wxVERTICAL);
@@ -62,15 +70,37 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
         MainApp::getInstance()->ShowPreferencesEditor(this);
     }, MainWindowThingybrowserSettings);
     Bind(wxEVT_MENU, [this](wxCommandEvent &) {
+        auto dialog = wxTextEntryDialog(this, "", _("Please enter a collection ID"), "", wxOK | wxCANCEL);
+        dialog.SetTextValidator(wxFILTER_DIGITS);
+        if (dialog.ShowModal() == wxID_OK) {
+            auto collectionId = 0ULL;
+            dialog.GetValue().ToULongLong(&collectionId);
+            auto collection = thingy::ThingiverseClient(
+                    MainApp::getInstance()->GetSettings().thingyverseApiKey).getCollection(collectionId);
+            auto window = new CollectionsWindow(this, collectionId, collection.count);
+            window->Show();
+        }
+    }, MainWindowOpenCollectionById);
+    Bind(wxEVT_MENU, [this](wxCommandEvent &) {
         auto dialog = wxTextEntryDialog(this, "", _("Please enter a thing ID"), "", wxOK | wxCANCEL);
         dialog.SetTextValidator(wxFILTER_DIGITS);
         if (dialog.ShowModal() == wxID_OK) {
-            unsigned long long thingId = 0;
+            auto thingId = 0ULL;
             dialog.GetValue().ToULongLong(&thingId);
             auto window = new ThingsWindow(this, thingId);
             window->Show();
         }
     }, MainWindowOpenThingById);
+    Bind(wxEVT_MENU, [this](wxCommandEvent &) {
+        auto dialog = wxTextEntryDialog(this, "", _("Please enter a thing URL"), "", wxOK | wxCANCEL);
+        if (dialog.ShowModal() == wxID_OK) {
+            auto thingId = 0ULL;
+            auto result = dialog.GetValue().AfterLast(':');
+            result.ToULongLong(&thingId);
+            auto window = new ThingsWindow(this, thingId);
+            window->Show();
+        }
+    }, MainWindowOpenThingByUrl);
     contentNotebook->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, [this](wxCommandEvent &) {
         if (contentNotebook->GetSelection() != -1) {
             auto page = dynamic_cast<tbButtonGridPage *>(contentNotebook->GetPage(contentNotebook->GetSelection()));

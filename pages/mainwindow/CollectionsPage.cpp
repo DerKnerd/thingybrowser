@@ -7,6 +7,7 @@
 #include "wx/mstream.h"
 #include "../../helper.h"
 #include "../../collections/CollectionsWindow.h"
+#include "../../MainApp.h"
 
 void CollectionsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) {
     size_t collectionCount = 0;
@@ -52,7 +53,6 @@ CollectionsPage::CollectionsPage(wxWindow *parent) : tbButtonGridPage(parent, wx
 
 void CollectionsPage::handleClick(int idx) {
     auto collectionId = ids[idx];
-    auto window = new CollectionsWindow(nullptr, collectionId, tiles[idx]->GetLabel().ToStdString(),
-                                        collectionItemCount[idx]);
+    auto window = new CollectionsWindow(nullptr, collectionId, collectionItemCount[idx]);
     window->Show();
 }
