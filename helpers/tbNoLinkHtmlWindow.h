@@ -10,11 +10,21 @@
 class twNoLinkHtmlWindow : public wxHtmlWindow {
 public:
     explicit twNoLinkHtmlWindow(wxWindow *parent, wxWindowID id = wxID_ANY, const wxPoint &pos = wxDefaultPosition,
-                       const wxSize &size = wxDefaultSize, long style = wxHW_DEFAULT_STYLE,
-                       const wxString &name = wxT("htmlWindow")) : wxHtmlWindow(parent, id, pos, size, style, name) {}
+                                const wxSize &size = wxDefaultSize, long style = wxHW_DEFAULT_STYLE,
+                                const wxString &name = wxT("htmlWindow")) : wxHtmlWindow(parent, id, pos, size, style,
+                                                                                         name) {}
 
     void OnLinkClicked(const wxHtmlLinkInfo &link) override {
-        wxLaunchDefaultBrowser(link.GetHref());
+        auto href = link.GetHref();
+        if (href.Contains("thing:")) {
+            auto thingId = href.AfterLast(':');
+            auto thingIdAsUll = 0ULL;
+            thingId.ToULongLong(&thingIdAsUll);
+            auto thingWindow = new ThingsWindow(nullptr, thingIdAsUll);
+            thingWindow->Show();
+        } else {
+            wxLaunchDefaultBrowser(link.GetHref());
+        }
     }
 };
 

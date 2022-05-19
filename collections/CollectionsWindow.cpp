@@ -10,6 +10,7 @@
 #include "wx/mstream.h"
 #include "wx/wrapsizer.h"
 #include "../things/ThingsWindow.h"
+#include "../helpers/ThingLoader.h"
 
 CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int collectionId, const std::string &title,
                                      unsigned long long int thingCount) : wxFrame(
@@ -86,6 +87,9 @@ CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int co
     Bind(cwEVT_LOG_MESSAGE, [this](cwLogMessageEvent &event) {
         GetStatusBar()->SetStatusText(event.message);
     });
+    Bind(twEVT_LOG_MESSAGE, [this](twLogMessageEvent &event) {
+        GetStatusBar()->SetStatusText(event.message);
+    });
     Bind(cwEVT_THINGS_LOADED, [this](cwThingsLoadedEvent &) {
         toolbar->EnableTool(CollectionsWindowDownloadThings, true);
     });
@@ -125,110 +129,114 @@ CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int co
                     apiClient.set_follow_location(true);
                     for (int idx = 0; idx < ids.size(); ++idx) {
                         if (ids[idx] == 0) { continue; }
-                        auto name = thingButtons[idx]->GetLabel();
-                        wxQueueEvent(sink, new cwThingDownloadingEvent("Downloading thing " + name));
-                        auto files = std::vector<thingy::entities::File>();
-                        auto images = std::vector<thingy::entities::Image>();
-                        try {
-                            files = thingy::ThingiverseClient(apiKey).getFilesByThing(ids[idx]);
-                            images = thingy::ThingiverseClient(apiKey).getImagesByThing(ids[idx]);
-                        } catch (thingy::ThingiverseException &ex) {
-                            wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
-                            return;
-                        }
-                        auto basePath = std::wstringstream();
-                        basePath << path << L"/" << ids[idx] << L" - " << name << L"/";
-                        auto thingPath = basePath.str();
-
-                        for (const auto &file: files) {
-                            if (file.downloadUrl.empty()) { continue; }
-                            wxQueueEvent(sink, new twFileDownloadingEvent("Downloading file " + file.name));
-                            auto response = apiClient.Get(file.downloadUrl.c_str());
-
-                            if (response.error() != httplib::Error::Success) {
-                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
-                                return;
-                            }
-                            if (!wxFileName::Mkdir(thingPath + "/files", wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
-                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
-                                return;
-                            }
-                            auto finalPath = wxString(thingPath).Append("/files/").Append(file.name);
-                            auto outputFile = wxFile();
-                            if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
-                                  outputFile.Open(finalPath, wxFile::write))) {
-                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
-                                return;
-                            }
-                            if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
-                                  outputFile.Flush() && outputFile.Close())) {
-                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
-                            } else {
-                                wxQueueEvent(sink, new cwLogMessageEvent("Saved thing file " + file.name));
-                            }
-                        }
-                        for (const auto &image: images) {
-                            try {
-                                auto imageSizes = std::find_if(image.sizes.begin(), image.sizes.end(),
-                                                               [](const thingy::entities::ImageSize &size) {
-                                                                   if (size.size == "large" && size.type == "display") {
-                                                                       return true;
-                                                                   }
-                                                                   return false;
-                                                               });
-                                auto url = image.sizes.front().url;
-                                if (imageSizes.base() != nullptr) {
-                                    url = imageSizes.base()->url;
-                                }
-                                auto response = apiClient.Get(url.c_str());
-
-                                if (response.error() != httplib::Error::Success) {
-                                    wxQueueEvent(sink, new cwLogMessageEvent("Failed to download image"));
-                                    return;
-                                }
-                                if (!wxFileName::Mkdir(wxString(thingPath).Append("/images/"), wxS_DIR_DEFAULT,
-                                                       wxPATH_MKDIR_FULL)) {
-                                    wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
-                                    return;
-                                }
-                                auto finalPath = wxString(thingPath).Append("/images/").Append(image.name);
-                                auto outputFile = wxFile();
-                                if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
-                                      outputFile.Open(finalPath, wxFile::write))) {
-                                    wxQueueEvent(sink, new cwLogMessageEvent("Failed to download image"));
-                                    return;
-                                }
-                                if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
-                                      outputFile.Flush() && outputFile.Close())) {
-                                    wxQueueEvent(sink, new cwLogMessageEvent("Failed to download image"));
-                                } else {
-                                    wxQueueEvent(sink, new cwLogMessageEvent("Saved thing image " + image.name));
-                                }
-                            } catch (thingy::ThingiverseException &exception) {
-                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download image"));
-                            }
-                        }
                         auto thing = thingy::ThingiverseClient(apiKey).getThing(ids[idx]);
-                        auto outputFile = wxFile();
-                        auto descriptionPath = thingPath + "/description.htm";
-                        if ((wxFile::Exists(descriptionPath) || outputFile.Create(descriptionPath)) &&
-                            outputFile.Open(descriptionPath, wxFile::write)) {
-                            auto data =
-                                    "<html>"
-                                    "<head>"
-                                    "<link rel=\"stylesheet\" href=\"https://unpkg.com/@picocss/pico@latest/css/pico.min.css\">"
-                                    "</head>"
-                                    "<body>"
-                                    "<main>"
-                                    + thing.detailsHtml + thing.instructionsHtml +
-                                    "</main>"
-                                    "</body>"
-                                    "</html>";
-                            outputFile.Write(data.c_str(), data.size());
-                            outputFile.Flush();
-                            outputFile.Close();
-                        }
-                        wxQueueEvent(sink, new cwThingDownloadedEvent("Downloaded thing " + name));
+                        wxQueueEvent(sink, new cwThingDownloadingEvent("Downloading thing " + thing.name));
+                        ThingLoader::downloadThingFilesAndImages(sink, thing,
+                                                                 path + "/" + std::to_string(thing.id) + " - " +
+                                                                 thing.name + "/", apiKey);
+                        wxQueueEvent(sink, new cwThingDownloadedEvent("Downloaded thing " + thing.name));
+//                        auto name = thingButtons[idx]->GetLabel();
+//                        auto files = std::vector<thingy::entities::File>();
+//                        auto images = std::vector<thingy::entities::Image>();
+//                        try {
+//                            files = thingy::ThingiverseClient(apiKey).getFilesByThing(ids[idx]);
+//                            images = thingy::ThingiverseClient(apiKey).getImagesByThing(ids[idx]);
+//                        } catch (thingy::ThingiverseException &ex) {
+//                            wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
+//                            return;
+//                        }
+//                        auto basePath = std::wstringstream();
+//                        basePath << path << L"/" << ids[idx] << L" - " << name << L"/";
+//                        auto thingPath = basePath.str();
+//
+//                        for (const auto &file: files) {
+//                            if (file.downloadUrl.empty()) { continue; }
+//                            wxQueueEvent(sink, new twFileDownloadingEvent("Downloading file " + file.name));
+//                            auto response = apiClient.Get(file.downloadUrl.c_str());
+//
+//                            if (response.error() != httplib::Error::Success) {
+//                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
+//                                return;
+//                            }
+//                            if (!wxFileName::Mkdir(thingPath + "/files", wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
+//                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
+//                                return;
+//                            }
+//                            auto finalPath = wxString(thingPath).Append("/files/").Append(file.name);
+//                            auto outputFile = wxFile();
+//                            if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
+//                                  outputFile.Open(finalPath, wxFile::write))) {
+//                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
+//                                return;
+//                            }
+//                            if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
+//                                  outputFile.Flush() && outputFile.Close())) {
+//                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
+//                            } else {
+//                                wxQueueEvent(sink, new cwLogMessageEvent("Saved thing file " + file.name));
+//                            }
+//                        }
+//                        for (const auto &image: images) {
+//                            try {
+//                                auto imageSizes = std::find_if(image.sizes.begin(), image.sizes.end(),
+//                                                               [](const thingy::entities::ImageSize &size) {
+//                                                                   if (size.size == "large" && size.type == "display") {
+//                                                                       return true;
+//                                                                   }
+//                                                                   return false;
+//                                                               });
+//                                auto url = image.sizes.front().url;
+//                                if (imageSizes.base() != nullptr) {
+//                                    url = imageSizes.base()->url;
+//                                }
+//                                auto response = apiClient.Get(url.c_str());
+//
+//                                if (response.error() != httplib::Error::Success) {
+//                                    wxQueueEvent(sink, new cwLogMessageEvent("Failed to download image"));
+//                                    return;
+//                                }
+//                                if (!wxFileName::Mkdir(wxString(thingPath).Append("/images/"), wxS_DIR_DEFAULT,
+//                                                       wxPATH_MKDIR_FULL)) {
+//                                    wxQueueEvent(sink, new cwLogMessageEvent("Failed to download thing"));
+//                                    return;
+//                                }
+//                                auto finalPath = wxString(thingPath).Append("/images/").Append(image.name);
+//                                auto outputFile = wxFile();
+//                                if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
+//                                      outputFile.Open(finalPath, wxFile::write))) {
+//                                    wxQueueEvent(sink, new cwLogMessageEvent("Failed to download image"));
+//                                    return;
+//                                }
+//                                if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
+//                                      outputFile.Flush() && outputFile.Close())) {
+//                                    wxQueueEvent(sink, new cwLogMessageEvent("Failed to download image"));
+//                                } else {
+//                                    wxQueueEvent(sink, new cwLogMessageEvent("Saved thing image " + image.name));
+//                                }
+//                            } catch (thingy::ThingiverseException &exception) {
+//                                wxQueueEvent(sink, new cwLogMessageEvent("Failed to download image"));
+//                            }
+//                        }
+//                        auto thing = thingy::ThingiverseClient(apiKey).getThing(ids[idx]);
+//                        auto outputFile = wxFile();
+//                        auto descriptionPath = thingPath + "/description.htm";
+//                        if ((wxFile::Exists(descriptionPath) || outputFile.Create(descriptionPath)) &&
+//                            outputFile.Open(descriptionPath, wxFile::write)) {
+//                            auto data =
+//                                    "<html>"
+//                                    "<head>"
+//                                    "<link rel=\"stylesheet\" href=\"https://unpkg.com/@picocss/pico@latest/css/pico.min.css\">"
+//                                    "</head>"
+//                                    "<body>"
+//                                    "<main>"
+//                                    + thing.detailsHtml + thing.instructionsHtml +
+//                                    "</main>"
+//                                    "</body>"
+//                                    "</html>";
+//                            outputFile.Write(data.c_str(), data.size());
+//                            outputFile.Flush();
+//                            outputFile.Close();
+//                        }
                     }
                 }, this, ids, thingButtons, dialog->GetPath(), apiKey).detach();
             }
