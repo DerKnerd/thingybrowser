@@ -65,3 +65,7 @@ int MainApp::OnExit() {
     delete wxConfigBase::Set((wxConfigBase *) nullptr);
     return wxAppBase::OnExit();
 }
+
+MainWindow *MainApp::getMainWindow() {
+    return mainWindow;
+}

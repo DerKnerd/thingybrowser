@@ -2,46 +2,31 @@
 // Created by imanuel on 15.05.22.
 //
 
-#include "CollectionsWindow.h"
+#include "CollectionDetailWindow.h"
 
 #include <utility>
 #include "../helper.h"
 #include "../MainApp.h"
 #include "wx/mstream.h"
 #include "wx/wrapsizer.h"
-#include "../things/ThingsWindow.h"
-#include "../helpers/ThingLoader.h"
+#include "../things/ThingDetailWindow.h"
 
-CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int collectionId,
-                                     unsigned long long int thingCount) : wxFrame(
-        parent, wxID_ANY, "", wxDefaultPosition, wxSize(1280, 800),
-        wxDEFAULT_FRAME_STYLE | wxCLIP_CHILDREN) {
-    toolbar = CreateToolBar(wxTB_HORIZONTAL | wxTB_HORZ_LAYOUT | wxTB_TEXT | wxTB_NOICONS);
-    toolbar->AddTool(CollectionsWindowActions::CollectionsWindowDownloadThings, _("Download all thing files"),
-                     wxNullBitmap);
-    toolbar->AddTool(CollectionsWindowActions::CollectionsWindowOpenOnThingiverse, _("Open on thingiverse"),
-                     wxNullBitmap);
-    toolbar->Realize();
-
-    toolbar->EnableTool(CollectionsWindowDownloadThings, false);
-    toolbar->EnableTool(CollectionsWindowOpenOnThingiverse, false);
-
-    CreateStatusBar();
-
-    panel = new wxPanel(this, wxID_ANY);
+CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long long int collectionId,
+                                               unsigned long long int thingCount) : wxPanel(parent),
+                                                                                    collectionId(collectionId) {
     auto contentSizer = new wxFlexGridSizer(2, 0, 5, 5);
     contentSizer->AddGrowableRow(1);
     contentSizer->AddGrowableCol(0);
 
-    this->title = new wxStaticText(panel, wxID_ANY, "", wxDefaultPosition, wxSize(-1, -1));
+    this->title = new wxStaticText(this, wxID_ANY, "", wxDefaultPosition, wxSize(-1, -1));
     this->title->SetFont({20, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD});
     contentSizer->Add(this->title, wxSizerFlags().Expand().Border(wxALL, WXC_FROM_DIP(5)));
 
+    SetSizer(contentSizer);
     SetName("CollectionsWindow");
     SetSize(wxDLG_UNIT(this, wxSize(-1, -1)));
-    panel->SetSizer(contentSizer);
     auto thingListSizer = new wxWrapSizer(wxHORIZONTAL);
-    auto scrolledWindow = new wxScrolledWindow(panel, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxVSCROLL);
+    auto scrolledWindow = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxVSCROLL);
     scrolledWindow->SetSizer(thingListSizer);
     scrolledWindow->SetScrollRate(5, 5);
     contentSizer->Add(scrolledWindow, wxSizerFlags().Expand().Border(wxALL, WXC_FROM_DIP(5)));
@@ -59,18 +44,9 @@ CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int co
         thingButtons[i]->Hide();
         thingButtons[i]->Bind(wxEVT_BUTTON, [this, i](wxCommandEvent &) {
             auto thingId = ids[i];
-            auto window = new ThingsWindow(nullptr, thingId);
-            window->Show();
+            auto caption = thingButtons[i]->GetLabel();
+            MainApp::getInstance()->getMainWindow()->addThingPage(thingId, caption);
         });
-    }
-
-    if (GetSizer()) {
-        GetSizer()->Fit(panel);
-    }
-    if (GetParent()) {
-        CentreOnParent(wxBOTH);
-    } else {
-        CentreOnScreen(wxBOTH);
     }
     auto apiKey = MainApp::getInstance()->GetSettings().thingyverseApiKey;
 
@@ -84,77 +60,13 @@ CollectionsWindow::CollectionsWindow(wxWindow *parent, unsigned long long int co
         thingButtons[idx]->Show();
     });
     Bind(cwEVT_COLLECTION_LOADED, [this](const cwCollectionLoadedEvent &event) {
-        toolbar->AddTool(CollectionsWindowGoToDesigner, _("More from ") + event.collection.creator.username,
-                         wxNullBitmap);
-        toolbar->EnableTool(CollectionsWindowOpenOnThingiverse, true);
         auto collection = event.collection;
-        this->SetTitle(
-                "#" + std::to_string(collection.id) + " - " + collection.name + _(" by ") +
-                collection.creator.username);
-        this->title->SetLabel("#" + std::to_string(collection.id) + " - " + collection.name + _(" by ") +
-                              collection.creator.username);
+        title->SetLabel("#" + std::to_string(collection.id) + " - " + collection.name + _(" by ") +
+                        collection.creator.username);
         Bind(wxEVT_MENU, [event](wxCommandEvent &) {
             wxLaunchDefaultBrowser(event.collection.absoluteUrl);
         }, CollectionsWindowOpenOnThingiverse);
     });
-    Bind(cwEVT_LOG_MESSAGE, [this](cwLogMessageEvent &event) {
-        GetStatusBar()->SetStatusText(event.message);
-    });
-    Bind(twEVT_LOG_MESSAGE, [this](twLogMessageEvent &event) {
-        GetStatusBar()->SetStatusText(event.message);
-    });
-    Bind(cwEVT_THINGS_LOADED, [this](cwThingsLoadedEvent &) {
-        toolbar->EnableTool(CollectionsWindowDownloadThings, true);
-    });
-    Bind(cwEVT_THING_DOWLOADED, [this](cwThingDownloadedEvent &event) {
-        if (downloadProgress != nullptr && downloadProgress->GetValue() < downloadProgress->GetRange()) {
-            downloadProgress->Update(downloadProgress->GetValue() + 1, event.message);
-        }
-    });
-    Bind(cwEVT_THING_DOWLOADING, [this](cwThingDownloadingEvent &event) {
-        if (downloadProgress != nullptr) {
-            downloadProgress->Update(downloadProgress->GetValue(), event.message);
-        }
-    });
-    Bind(wxEVT_MENU, [this, apiKey](wxCommandEvent &) {
-        auto fileOpenDialog = new wxDirDialog(this, _("Save things"), wxEmptyString, wxDD_DEFAULT_STYLE);
-        fileOpenDialog->Bind(wxEVT_WINDOW_MODAL_DIALOG_CLOSED, [this, apiKey](const wxWindowModalDialogEvent &event) {
-            if (event.GetReturnCode() == wxID_OK) {
-                downloadProgress = new wxProgressDialog(_("Download progress"), _("Downloading files"),
-                                                        std::count_if(ids.begin(), ids.end(),
-                                                                      [](unsigned long long id) {
-                                                                          return id != 0ULL;
-                                                                      }), this, wxPD_AUTO_HIDE);
-                auto dialog = dynamic_cast<wxDirDialog *>(event.GetDialog());
-                std::thread([](wxWindow *sink, std::vector<unsigned long long> ids,
-                               std::vector<wxBitmapButton *> thingButtons, const wxString &path,
-                               const std::string &apiKey) {
-                    auto cdnClient = httplib::Client("https://api.thingiverse.com");
-                    cdnClient.set_read_timeout(5 * 60);
-                    cdnClient.set_connection_timeout(5 * 60);
-                    cdnClient.set_bearer_token_auth(apiKey.c_str());
-                    cdnClient.set_follow_location(true);
-
-                    auto apiClient = httplib::Client("https://api.thingiverse.com");
-                    apiClient.set_read_timeout(5 * 60);
-                    apiClient.set_connection_timeout(5 * 60);
-                    apiClient.set_bearer_token_auth(apiKey.c_str());
-                    apiClient.set_follow_location(true);
-                    for (int idx = 0; idx < ids.size(); ++idx) {
-                        if (ids[idx] == 0) { continue; }
-                        auto thing = thingy::ThingiverseClient(apiKey).getThing(ids[idx]);
-                        wxQueueEvent(sink, new cwThingDownloadingEvent("Downloading thing " + thing.name));
-                        ThingLoader::downloadThingFilesAndImages(sink, thing,
-                                                                 path + "/" + std::to_string(thing.id) + " - " +
-                                                                 thing.name + "/", apiKey);
-                        wxQueueEvent(sink, new cwThingDownloadedEvent("Downloaded thing " + thing.name));
-                    }
-                }, this, ids, thingButtons, dialog->GetPath(), apiKey).detach();
-            }
-        });
-
-        fileOpenDialog->ShowWindowModal();
-    }, CollectionsWindowDownloadThings);
 
     std::thread([](wxEvtHandler *sink, unsigned long long collectionId, const std::string &apiKey) {
         auto client = thingy::ThingiverseClient(apiKey);

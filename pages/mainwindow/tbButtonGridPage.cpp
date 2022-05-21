@@ -106,6 +106,13 @@ void tbButtonGridPage::loadData() {
     th.detach();
 }
 
+void tbButtonGridPage::initialLoad() {
+    if (!initialLoadingDone) {
+        initialLoadingDone = true;
+        loadData();
+    }
+}
+
 tbLoadedEvent::tbLoadedEvent(int buttonIndex, const wxBitmap &bitmap, const wxString &title, unsigned long long id)
         : buttonIndex(buttonIndex), bitmap(bitmap), title(title), id(id), wxThreadEvent(tbEVT_LOADED) {}
 

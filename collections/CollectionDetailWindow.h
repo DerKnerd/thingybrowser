@@ -2,8 +2,8 @@
 // Created by imanuel on 15.05.22.
 //
 
-#ifndef THINGYBROWSER_COLLECTIONSWINDOW_H
-#define THINGYBROWSER_COLLECTIONSWINDOW_H
+#ifndef THINGYBROWSER_COLLECTIONDETAILWINDOW_H
+#define THINGYBROWSER_COLLECTIONDETAILWINDOW_H
 
 #include <libthingy.h>
 #include "wx/wxprec.h"
@@ -67,24 +67,17 @@ wxDEFINE_EVENT(cwEVT_LOG_MESSAGE, cwLogMessageEvent);
 wxDEFINE_EVENT(cwEVT_THING_DOWLOADED, cwThingDownloadedEvent);
 wxDEFINE_EVENT(cwEVT_THING_DOWLOADING, cwThingDownloadingEvent);
 
-enum CollectionsWindowActions {
-    CollectionsWindowDownloadThings,
-    CollectionsWindowGoToDesigner,
-    CollectionsWindowOpenOnThingiverse,
-};
-
-class CollectionsWindow : public wxFrame {
+class CollectionDetailWindow : public wxPanel {
 public:
-    CollectionsWindow(wxWindow *parent, unsigned long long int collectionId, unsigned long long int thingCount);
+    CollectionDetailWindow(wxWindow *parent, unsigned long long int collectionId, unsigned long long int thingCount);
 
+    unsigned long long collectionId;
 private:
-    wxToolBar *toolbar;
     wxStaticText *title;
-    wxPanel *panel;
     wxProgressDialog *downloadProgress;
     std::vector<wxBitmapButton *> thingButtons;
     std::vector<unsigned long long> ids;
 };
 
 
-#endif //THINGYBROWSER_COLLECTIONSWINDOW_H
+#endif //THINGYBROWSER_COLLECTIONDETAILWINDOW_H

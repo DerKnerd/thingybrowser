@@ -41,8 +41,11 @@ protected:
     wxButton *previousPage;
     wxSearchCtrl *searchCtrl;
     std::vector<unsigned long long> ids;
+    bool initialLoadingDone = false;
 
 public:
+    void initialLoad();
+
     void loadData();
 
     tbButtonGridPage(wxWindow *parent, wxWindowID winid, const wxPoint &pos, const wxSize &size, long style,

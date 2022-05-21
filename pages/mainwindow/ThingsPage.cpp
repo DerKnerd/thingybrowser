@@ -5,8 +5,9 @@
 #include "ThingsPage.h"
 #include "../../helper.h"
 #include "wx/mstream.h"
-#include "../../things/ThingsWindow.h"
+#include "../../things/ThingDetailWindow.h"
 #include <libthingy.h>
+#include "../../MainApp.h"
 
 void ThingsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *sink, const wxString &keyword) {
     size_t thingCount = 0;
@@ -32,7 +33,7 @@ void ThingsPage::internalLoad(int page, const wxString &apiKey, wxEvtHandler *si
             auto bmp = wxBitmap(
                     img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)),
                                                                         wxDefaultPosition));
-            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, thing.name + _(" by ") + thing.creator.username, thing.id));
+            wxQueueEvent(sink, new tbLoadedEvent(i, bmp, thing.name, thing.id));
         }
         thingCount = things.size();
     } catch (thingy::ThingiverseException &e) {
@@ -49,6 +50,6 @@ ThingsPage::ThingsPage(wxWindow *parent) : tbButtonGridPage(parent, wxID_ANY, wx
 
 void ThingsPage::handleClick(int idx) {
     auto thingId = ids[idx];
-    auto window = new ThingsWindow(nullptr, thingId);
-    window->Show();
+    auto caption = tiles[idx]->GetLabel();
+    MainApp::getInstance()->getMainWindow()->addThingPage(thingId, caption);
 }

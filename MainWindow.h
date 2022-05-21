@@ -5,6 +5,7 @@
 #ifndef THINGYBROWSER_MAINWINDOW_H
 #define THINGYBROWSER_MAINWINDOW_H
 
+#include <libthingy.h>
 #include "wx/wxprec.h"
 
 #ifndef WX_PRECOMP
@@ -13,27 +14,91 @@
 
 #endif
 
-#include "wx/notebook.h"
-#include "pages/mainwindow/ThingsPage.h"
+#include "wx/aui/aui.h"
+#include "things/ThingDetailWindow.h"
 
 enum MainWindowActions {
     MainWindowThingybrowserSettings,
     MainWindowOpenThingById,
     MainWindowOpenThingByUrl,
     MainWindowOpenCollectionById,
+    ThingsWindowDownloadThing,
+    ThingsWindowOpenOnThingiverse,
+    ThingsWindowGoToDesigner,
+    CollectionsWindowDownloadThings,
+    CollectionsWindowGoToDesigner,
+    CollectionsWindowOpenOnThingiverse,
 };
 
+class mwThingLoadedEvent : public wxCommandEvent {
+public:
+    explicit mwThingLoadedEvent(thingy::entities::Thing thing);
+
+    thingy::entities::Thing thing;
+};
+
+class mwFileDownloadedEvent : public wxThreadEvent {
+public:
+    explicit mwFileDownloadedEvent(std::string message);
+
+    std::string message;
+};
+
+class mwFileDownloadingEvent : public wxThreadEvent {
+public:
+    explicit mwFileDownloadingEvent(std::string message);
+
+    std::string message;
+};
+
+class mwLogMessageEvent : public wxThreadEvent {
+public:
+    explicit mwLogMessageEvent(const wxString &message);
+
+    wxString message;
+};
+
+class mwFilesCountedEvent : public wxThreadEvent {
+public:
+    explicit mwFilesCountedEvent(long count);
+
+    long count;
+};
+
+wxDEFINE_EVENT(mwEVT_THING_LOADED, mwThingLoadedEvent);
+wxDEFINE_EVENT(mwEVT_LOG_MESSAGE, mwLogMessageEvent);
+wxDEFINE_EVENT(mwEVT_FILE_DOWNLOADED, mwFileDownloadedEvent);
+wxDEFINE_EVENT(mwEVT_FILE_DOWNLOADING, mwFileDownloadingEvent);
+wxDEFINE_EVENT(mwEVT_FILES_COUNTED, mwFilesCountedEvent);
+
 class MainWindow : public wxFrame {
-private:
-    wxToolBar *toolbar;
-    wxNotebook *contentNotebook;
-
-    void handleShow(wxShowEvent &event);
-
 public:
     MainWindow();
 
     void loadData();
+
+    void addThingPage(unsigned long long int thingId, const wxString &caption);
+
+    void
+    addCollectionPage(unsigned long long int collectionId, unsigned long long thingsCount, const wxString &caption);
+
+    void downloadThingFilesAndImages(unsigned long long thingId, const std::string &path, const std::string &apiKey);
+
+private:
+    wxAuiToolBar *mainWindowToolbar;
+    wxAuiToolBar *thingToolbar;
+    wxAuiToolBar *collectionToolbar;
+    unsigned long long thingId;
+    unsigned long long collectionId;
+    thingy::entities::Thing thing;
+
+    wxListBox *logOutput;
+
+    void handleShow(wxShowEvent &event);
+    void log(const wxString& message);
+
+    wxAuiManager auiManager;
+    wxAuiNotebook *contentNotebook;
 };
 
 

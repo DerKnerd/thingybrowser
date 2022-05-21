@@ -60,10 +60,10 @@ endif ()
 
 find_package(libthingy)
 
-add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp pages/mainwindow/ThingsPage.cpp pages/mainwindow/ThingsPage.h helper.h pages/mainwindow/tbDataPage.h pages/mainwindow/tbButtonGridPage.cpp pages/mainwindow/tbButtonGridPage.h pages/mainwindow/CollectionsPage.cpp pages/mainwindow/CollectionsPage.h pages/mainwindow/DesignersPage.cpp pages/mainwindow/DesignersPage.h things/ThingsWindow.cpp things/ThingsWindow.h helpers/font.h helpers/tbNoLinkHtmlWindow.h collections/CollectionsWindow.cpp helpers/ThingLoader.cpp helpers/ThingLoader.h)
+add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp pages/mainwindow/ThingsPage.cpp pages/mainwindow/ThingsPage.h helper.h pages/mainwindow/tbDataPage.h pages/mainwindow/tbButtonGridPage.cpp pages/mainwindow/tbButtonGridPage.h pages/mainwindow/CollectionsPage.cpp pages/mainwindow/CollectionsPage.h pages/mainwindow/DesignersPage.cpp pages/mainwindow/DesignersPage.h things/ThingDetailWindow.cpp things/ThingDetailWindow.h helpers/font.h helpers/tbNoLinkHtmlWindow.h collections/CollectionDetailWindow.cpp helpers/tbNoLinkHtmlWindow.cpp)
 include_directories(libs/libthingy)
 if (MINGW)
-    target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net libthingy::libthingy httplib::httplib)
+    target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net wx::aui libthingy::libthingy httplib::httplib)
 else ()
-    target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net libthingy::libthingy httplib::httplib)
+    target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net wx::aui libthingy::libthingy httplib::httplib)
 endif ()

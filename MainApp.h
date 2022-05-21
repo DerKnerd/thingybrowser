@@ -43,6 +43,8 @@ public:
     const thingybrowserSettings &GetSettings() const { return appSettings; }
 
     void UpdateSettings(const thingybrowserSettings &settings);
+
+    MainWindow* getMainWindow();
 };
 
 
