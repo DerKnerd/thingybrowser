@@ -72,7 +72,6 @@ CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long l
         auto client = thingy::ThingiverseClient(apiKey);
         try {
             auto things = client.getThingsByCollection(collectionId);
-            wxQueueEvent(sink, new cwThingsCountedEvent(things.size()));
             for (auto i = 0; i < things.size(); ++i) {
                 auto thing = things.at(i);
                 auto httpClient = httplib::Client("cdn.thingiverse.com");
@@ -94,9 +93,9 @@ CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long l
             }
             wxQueueEvent(sink, new cwThingsLoadedEvent());
         } catch (thingy::ThingiverseException &e) {
-            wxQueueEvent(sink, new cwLogMessageEvent(e.what()));
+            wxLogStatus(e.what());
         } catch (std::exception &e) {
-            wxQueueEvent(sink, new cwLogMessageEvent(e.what()));
+            wxLogStatus(e.what());
         }
     }, this, collectionId, apiKey).detach();
     std::thread([](wxEvtHandler *sink, unsigned long long collectionId, const std::string &apiKey) {
@@ -111,18 +110,7 @@ cwThingLoadedEvent::cwThingLoadedEvent(int buttonIndex, const wxBitmap &bitmap, 
                                                                     title(title), id(id),
                                                                     wxThreadEvent(cwEVT_THING_LOADED) {}
 
-cwLogMessageEvent::cwLogMessageEvent(const wxString &message) : message(message), wxThreadEvent(cwEVT_LOG_MESSAGE) {}
-
-cwThingDownloadedEvent::cwThingDownloadedEvent(std::string message) : wxThreadEvent(cwEVT_THING_DOWLOADED),
-                                                                      message(std::move(message)) {}
-
-cwThingDownloadingEvent::cwThingDownloadingEvent(std::string message) : wxThreadEvent(cwEVT_THING_DOWLOADING),
-                                                                        message(std::move(message)) {}
-
 cwThingsLoadedEvent::cwThingsLoadedEvent() : wxThreadEvent(cwEVT_THINGS_LOADED) {}
 
 cwCollectionLoadedEvent::cwCollectionLoadedEvent(thingy::entities::Collection collection) : collection(
         std::move(collection)), wxThreadEvent(cwEVT_COLLECTION_LOADED) {}
-
-cwThingsCountedEvent::cwThingsCountedEvent(unsigned long long thingCount) : thingCount(thingCount),
-                                                                            wxThreadEvent(cwEVT_THINGS_COUNTED) {}

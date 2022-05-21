@@ -70,11 +70,35 @@ public:
     long count;
 };
 
+class mwThingDownloadedEvent : public wxThreadEvent {
+public:
+    explicit mwThingDownloadedEvent(std::string message);
+
+    std::string message;
+};
+
+class mwThingDownloadingEvent : public wxThreadEvent {
+public:
+    explicit mwThingDownloadingEvent(std::string message);
+
+    std::string message;
+};
+
+class mwThingsCountedEvent : public wxThreadEvent {
+public:
+    explicit mwThingsCountedEvent(unsigned long long thingCount);
+
+    unsigned long long thingCount = 0;
+};
+
 wxDEFINE_EVENT(mwEVT_THING_LOADED, mwThingLoadedEvent);
 wxDEFINE_EVENT(mwEVT_LOG_MESSAGE, mwLogMessageEvent);
 wxDEFINE_EVENT(mwEVT_FILE_DOWNLOADED, mwFileDownloadedEvent);
 wxDEFINE_EVENT(mwEVT_FILE_DOWNLOADING, mwFileDownloadingEvent);
 wxDEFINE_EVENT(mwEVT_FILES_COUNTED, mwFilesCountedEvent);
+wxDEFINE_EVENT(mwEVT_THING_DOWLOADED, mwThingDownloadedEvent);
+wxDEFINE_EVENT(mwEVT_THING_DOWLOADING, mwThingDownloadingEvent);
+wxDEFINE_EVENT(mwEVT_THINGS_COUNTED, mwThingsCountedEvent);
 
 class MainWindow : public wxFrame {
 public:
@@ -101,6 +125,7 @@ private:
     thingy::entities::Thing thing;
 
     wxListBox *logOutput;
+    wxGauge *downloadProgress;
 
     void handleShow(wxShowEvent &event);
 

@@ -75,6 +75,7 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
     contentNotebook->AddPage(new DesignersPage(contentNotebook), _("Designers"));
 
     logOutput = new wxListBox(panel, wxID_ANY);
+    downloadProgress = new wxGauge(panel, wxID_ANY, 1);
 
     auiManager.AddPane(mainWindowToolbar, wxAuiPaneInfo()
             .Name("mainWindowToolbar")
@@ -102,9 +103,20 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
             .Caption(_("Download log"))
             .Layer(1)
             .Position(1)
-            .Row(1)
+            .Row(2)
             .CloseButton(false)
             .MinSize(-1, WXC_FROM_DIP(150))
+            .Show());
+    auiManager.AddPane(downloadProgress, wxAuiPaneInfo()
+            .Name("downloadProgress")
+            .Bottom()
+            .CloseButton(false)
+            .CaptionVisible(false)
+            .Layer(1)
+            .Position(1)
+            .Row(1)
+            .Gripper(false)
+            .DockFixed()
             .Show());
     auiManager.AddPane(contentNotebook, wxAuiPaneInfo()
             .Name("content_notebook")
@@ -178,18 +190,17 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
     Bind(mwEVT_FILES_COUNTED, [this](mwFilesCountedEvent &event) {
         log(std::to_string(event.count) + " files to download");
     });
-    Bind(cwEVT_LOG_MESSAGE, [this](cwLogMessageEvent &event) {
-        log(event.message);
-    });
-    Bind(cwEVT_THING_DOWLOADED, [this](cwThingDownloadedEvent &event) {
+    Bind(mwEVT_THING_DOWLOADED, [this](mwThingDownloadedEvent &event) {
         log(event.message);
         thingsDownloaded++;
+        downloadProgress->SetValue(thingsDownloaded);
     });
-    Bind(cwEVT_THING_DOWLOADING, [this](cwThingDownloadingEvent &event) {
+    Bind(mwEVT_THING_DOWLOADING, [this](mwThingDownloadingEvent &event) {
         log(event.message);
     });
-    Bind(cwEVT_THINGS_COUNTED, [this](cwThingsCountedEvent &event) {
+    Bind(mwEVT_THINGS_COUNTED, [this](mwThingsCountedEvent &event) {
         totalThingsToDownload += event.thingCount;
+        downloadProgress->SetRange(totalThingsToDownload);
     });
 
     auto apiKey = MainApp::getInstance()->GetSettings().thingyverseApiKey;
@@ -199,6 +210,7 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
             if (event.GetReturnCode() == wxID_OK) {
                 auto dialog = dynamic_cast<wxDirDialog *>(event.GetDialog());
                 totalThingsToDownload++;
+                downloadProgress->SetRange(totalThingsToDownload);
                 std::thread([this](const unsigned long long id, const std::string &path, const std::string &apiKey) {
                     this->downloadThingFilesAndImages(id, path, apiKey);
                 }, thingId, dialog->GetPath(), apiKey).detach();
@@ -229,13 +241,14 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
                     apiClient.set_follow_location(true);
 
                     auto thingyClient = thingy::ThingiverseClient(apiKey);
-                    for (const auto &thing: thingyClient.getThingsByCollection(collectionId)) {
-                        wxQueueEvent(this, new cwThingDownloadingEvent("Downloading thing " + thing.name));
+                    auto things = thingyClient.getThingsByCollection(collectionId);
+                    wxQueueEvent(this, new mwThingsCountedEvent(things.size()));
+                    for (const auto &thing: things) {
+                        wxQueueEvent(this, new mwThingDownloadingEvent("Downloading thing " + thing.name));
                         this->downloadThingFilesAndImages(thing.id,
                                                           path + "/" + std::to_string(thing.id) + " - " + thing.name +
-                                                          "/",
-                                                          apiKey);
-                        wxQueueEvent(this, new cwThingDownloadedEvent("Downloaded thing " + thing.name));
+                                                          "/", apiKey);
+                        wxQueueEvent(this, new mwThingDownloadedEvent("Downloaded thing " + thing.name));
                     }
                 }, dialog->GetPath(), apiKey, collectionId).detach();
             }
@@ -244,7 +257,14 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
         fileOpenDialog->ShowWindowModal();
     }, CollectionsWindowDownloadThings);
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent &event) {
-        event.Veto(totalThingsToDownload > thingsDownloaded);
+        if (totalThingsToDownload > thingsDownloaded) {
+            if (wxMessageBox(_("Not all things are downloaded, do you still want to close Thingybrowser?"),
+                             _("Please confirm exit"), wxICON_WARNING | wxYES_NO | wxNO_DEFAULT) != wxYES) {
+                event.Veto();
+                return;
+            }
+        }
+        event.Skip();
     });
 
     contentNotebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, [this](wxAuiNotebookEvent &) {
@@ -318,130 +338,138 @@ void MainWindow::downloadThingFilesAndImages(unsigned long long thingId, const s
     if (!wxFileName::Mkdir(path, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL)) {
         return;
     }
-    auto files = thingy::ThingiverseClient(apiKey).getFilesByThing(thingId);
-    auto images = thingy::ThingiverseClient(apiKey).getImagesByThing(thingId);
-    auto filesCount = std::count_if(files.begin(), files.end(), [](const thingy::entities::File &file) {
-        return !file.downloadUrl.empty();
-    });
-    auto imagesCount = images.size();
-    wxQueueEvent(this, new mwFilesCountedEvent(filesCount + imagesCount));
+    try {
+        auto files = thingy::ThingiverseClient(apiKey).getFilesByThing(thingId);
+        auto images = thingy::ThingiverseClient(apiKey).getImagesByThing(thingId);
+        auto filesCount = std::count_if(files.begin(), files.end(), [](const thingy::entities::File &file) {
+            return !file.downloadUrl.empty();
+        });
+        auto imagesCount = images.size();
+        wxQueueEvent(this, new mwFilesCountedEvent(filesCount + imagesCount));
 
-    auto cdnClient = httplib::Client("https://cdn.thingiverse.com");
-    cdnClient.set_read_timeout(5 * 60);
-    cdnClient.set_connection_timeout(5 * 60);
-    cdnClient.set_bearer_token_auth(apiKey.c_str());
-    cdnClient.set_follow_location(true);
+        auto cdnClient = httplib::Client("https://cdn.thingiverse.com");
+        cdnClient.set_read_timeout(5 * 60);
+        cdnClient.set_connection_timeout(5 * 60);
+        cdnClient.set_bearer_token_auth(apiKey.c_str());
+        cdnClient.set_follow_location(true);
 
-    auto apiClient = httplib::Client("https://api.thingiverse.com");
-    apiClient.set_read_timeout(5 * 60);
-    apiClient.set_connection_timeout(5 * 60);
-    apiClient.set_bearer_token_auth(apiKey.c_str());
-    apiClient.set_follow_location(true);
-    for (const auto &file: files) {
-        try {
-            if (file.downloadUrl.empty()) { continue; }
-            wxQueueEvent(this, new mwFileDownloadingEvent("Downloading file " + file.name));
-            auto response = apiClient.Get(file.downloadUrl.c_str());
-            if (response.error() != httplib::Error::Success) {
-                wxQueueEvent(this, new mwLogMessageEvent("Failed to download file"));
-                wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded file " + file.name));
-                continue;
-            }
+        auto apiClient = httplib::Client("https://api.thingiverse.com");
+        apiClient.set_read_timeout(5 * 60);
+        apiClient.set_connection_timeout(5 * 60);
+        apiClient.set_bearer_token_auth(apiKey.c_str());
+        apiClient.set_follow_location(true);
+        for (const auto &file: files) {
+            try {
+                if (file.downloadUrl.empty()) { continue; }
+                wxQueueEvent(this, new mwFileDownloadingEvent("Downloading file " + file.name));
+                auto response = apiClient.Get(file.downloadUrl.c_str());
+                if (response.error() != httplib::Error::Success) {
+                    wxQueueEvent(this, new mwLogMessageEvent("Failed to download file"));
+                    wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded file " + file.name));
+                    continue;
+                }
 
-            if (!wxFileName::Mkdir(wxString(path).Append("/files/"), wxS_DIR_DEFAULT,
-                                   wxPATH_MKDIR_FULL)) {
+                if (!wxFileName::Mkdir(wxString(path).Append("/files/"), wxS_DIR_DEFAULT,
+                                       wxPATH_MKDIR_FULL)) {
+                    wxQueueEvent(this, new mwLogMessageEvent("Failed to download file"));
+                    wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded file " + file.name));
+                    continue;
+                }
+                auto finalPath = wxString(path).Append("/files/").Append(file.name);
+                auto outputFile = wxFile();
+                if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
+                      outputFile.Open(finalPath, wxFile::write))) {
+                    wxQueueEvent(this, new mwLogMessageEvent("Failed to download file"));
+                    return;
+                }
+                if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
+                      outputFile.Flush() && outputFile.Close())) {
+                    wxQueueEvent(this, new mwLogMessageEvent("Failed to download file"));
+                } else {
+                    wxQueueEvent(this, new mwLogMessageEvent("Saved thing file " + file.name));
+                }
+            } catch (thingy::ThingiverseException &exception) {
                 wxQueueEvent(this, new mwLogMessageEvent("Failed to download file"));
-                wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded file " + file.name));
-                continue;
             }
-            auto finalPath = wxString(path).Append("/files/").Append(file.name);
-            auto outputFile = wxFile();
-            if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
-                  outputFile.Open(finalPath, wxFile::write))) {
-                wxQueueEvent(this, new mwLogMessageEvent("Failed to download file"));
-                return;
-            }
-            if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
-                  outputFile.Flush() && outputFile.Close())) {
-                wxQueueEvent(this, new mwLogMessageEvent("Failed to download file"));
-            } else {
-                wxQueueEvent(this, new mwLogMessageEvent("Saved thing file " + file.name));
-            }
-        } catch (thingy::ThingiverseException &exception) {
-            wxQueueEvent(this, new mwLogMessageEvent("Failed to download file"));
+            wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded file " + file.name));
         }
-        wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded file " + file.name));
+        wxQueueEvent(this, new mwLogMessageEvent("Downloaded all thing files"));
+
+        for (const auto &image: images) {
+            try {
+                auto imageSizes = std::find_if(image.sizes.begin(), image.sizes.end(),
+                                               [](const thingy::entities::ImageSize &size) {
+                                                   if (size.size == "large" && size.type == "display") {
+                                                       return true;
+                                                   }
+                                                   return false;
+                                               });
+                auto url = image.sizes.front().url;
+                if (imageSizes.base() != nullptr) {
+                    url = imageSizes.base()->url;
+                }
+                auto response = cdnClient.Get(url.c_str());
+                wxQueueEvent(this, new mwFileDownloadingEvent("Downloading image " + image.name));
+
+                if (!wxFileName::Mkdir(wxString(path).Append("/images/"), wxS_DIR_DEFAULT,
+                                       wxPATH_MKDIR_FULL)) {
+                    wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
+                    wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded image " + image.name));
+                    continue;
+                }
+                if (response.error() != httplib::Error::Success) {
+                    wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
+                    return;
+                }
+                auto finalPath = wxString(path).Append("/images/").Append(image.name);
+                auto outputFile = wxFile();
+                if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
+                      outputFile.Open(finalPath, wxFile::write))) {
+                    wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
+                    return;
+                }
+                if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
+                      outputFile.Flush() && outputFile.Close())) {
+                    wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
+                } else {
+                    wxQueueEvent(this, new mwLogMessageEvent("Saved thing image " + image.name));
+                }
+            } catch (thingy::ThingiverseException &exception) {
+                wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
+            }
+            wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded image " + image.name));
+        }
+        wxQueueEvent(this, new mwLogMessageEvent("Downloaded all thing images"));
+    } catch (std::exception &exception) {
+        wxQueueEvent(this, new mwLogMessageEvent(exception.what()));
     }
-    wxQueueEvent(this, new mwLogMessageEvent("Downloaded all thing files"));
 
-    for (const auto &image: images) {
-        try {
-            auto imageSizes = std::find_if(image.sizes.begin(), image.sizes.end(),
-                                           [](const thingy::entities::ImageSize &size) {
-                                               if (size.size == "large" && size.type == "display") {
-                                                   return true;
-                                               }
-                                               return false;
-                                           });
-            auto url = image.sizes.front().url;
-            if (imageSizes.base() != nullptr) {
-                url = imageSizes.base()->url;
+    try {
+        auto thing = thingy::ThingiverseClient(apiKey).getThing(thingId);
+        auto outputFile = wxFile();
+        auto descriptionPath = path + "/description.htm";
+        if (wxFile::Exists(descriptionPath) || outputFile.Create(descriptionPath)) {
+            if (outputFile.Open(descriptionPath, wxFile::write)) {
+                auto data =
+                        "<html>"
+                        "<head>"
+                        "<link rel=\"stylesheet\" href=\"https://unpkg.com/@picocss/pico@latest/css/pico.min.css\">"
+                        "</head>"
+                        "<body>"
+                        "<main>"
+                        "<section>"
+                        + thing.detailsHtml + thing.instructionsHtml +
+                        "</section>"
+                        "</main>"
+                        "</body>"
+                        "</html>";
+                outputFile.Write(data.c_str(), data.size());
+                outputFile.Flush();
+                outputFile.Close();
             }
-            auto response = cdnClient.Get(url.c_str());
-            wxQueueEvent(this, new mwFileDownloadingEvent("Downloading image " + image.name));
-
-            if (!wxFileName::Mkdir(wxString(path).Append("/images/"), wxS_DIR_DEFAULT,
-                                   wxPATH_MKDIR_FULL)) {
-                wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
-                wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded image " + image.name));
-                continue;
-            }
-            if (response.error() != httplib::Error::Success) {
-                wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
-                return;
-            }
-            auto finalPath = wxString(path).Append("/images/").Append(image.name);
-            auto outputFile = wxFile();
-            if (!((wxFile::Exists(finalPath) || outputFile.Create(finalPath)) &&
-                  outputFile.Open(finalPath, wxFile::write))) {
-                wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
-                return;
-            }
-            if (!(outputFile.Write(response->body.c_str(), response->body.size()) &&
-                  outputFile.Flush() && outputFile.Close())) {
-                wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
-            } else {
-                wxQueueEvent(this, new mwLogMessageEvent("Saved thing image " + image.name));
-            }
-        } catch (thingy::ThingiverseException &exception) {
-            wxQueueEvent(this, new mwLogMessageEvent("Failed to download image"));
         }
-        wxQueueEvent(this, new mwFileDownloadedEvent("Downloaded image " + image.name));
-    }
-    wxQueueEvent(this, new mwLogMessageEvent("Downloaded all thing images"));
-
-    auto thing = thingy::ThingiverseClient(apiKey).getThing(thingId);
-    auto outputFile = wxFile();
-    auto descriptionPath = path + "/description.htm";
-    if (wxFile::Exists(descriptionPath) || outputFile.Create(descriptionPath)) {
-        if (outputFile.Open(descriptionPath, wxFile::write)) {
-            auto data =
-                    "<html>"
-                    "<head>"
-                    "<link rel=\"stylesheet\" href=\"https://unpkg.com/@picocss/pico@latest/css/pico.min.css\">"
-                    "</head>"
-                    "<body>"
-                    "<main>"
-                    "<section>"
-                    + thing.detailsHtml + thing.instructionsHtml +
-                    "</section>"
-                    "</main>"
-                    "</body>"
-                    "</html>";
-            outputFile.Write(data.c_str(), data.size());
-            outputFile.Flush();
-            outputFile.Close();
-        }
+    } catch (std::exception &exception) {
+        wxQueueEvent(this, new mwLogMessageEvent(exception.what()));
     }
 }
 
@@ -462,3 +490,12 @@ mwFileDownloadingEvent::mwFileDownloadingEvent(std::string message) : message(st
                                                                       wxThreadEvent(mwEVT_FILE_DOWNLOADING) {}
 
 mwFilesCountedEvent::mwFilesCountedEvent(long count) : count(count), wxThreadEvent(mwEVT_FILES_COUNTED) {}
+
+mwThingsCountedEvent::mwThingsCountedEvent(unsigned long long thingCount) : thingCount(thingCount),
+                                                                            wxThreadEvent(mwEVT_THINGS_COUNTED) {}
+
+mwThingDownloadedEvent::mwThingDownloadedEvent(std::string message) : wxThreadEvent(mwEVT_THING_DOWLOADED),
+                                                                      message(std::move(message)) {}
+
+mwThingDownloadingEvent::mwThingDownloadingEvent(std::string message) : wxThreadEvent(mwEVT_THING_DOWLOADING),
+                                                                        message(std::move(message)) {}

@@ -17,13 +17,6 @@
 #include "wx/gbsizer.h"
 #include "wx/progdlg.h"
 
-class cwThingsCountedEvent : public wxThreadEvent {
-public:
-    explicit cwThingsCountedEvent(unsigned long long thingCount);
-
-    unsigned long long thingCount=0;
-};
-
 class cwCollectionLoadedEvent : public wxThreadEvent {
 public:
     explicit cwCollectionLoadedEvent(thingy::entities::Collection collection);
@@ -46,34 +39,9 @@ public:
     explicit cwThingsLoadedEvent();
 };
 
-class cwLogMessageEvent : public wxThreadEvent {
-public:
-    explicit cwLogMessageEvent(const wxString &message);
-
-    wxString message;
-};
-
-class cwThingDownloadedEvent : public wxThreadEvent {
-public:
-    explicit cwThingDownloadedEvent(std::string message);
-
-    std::string message;
-};
-
-class cwThingDownloadingEvent : public wxThreadEvent {
-public:
-    explicit cwThingDownloadingEvent(std::string message);
-
-    std::string message;
-};
-
-wxDEFINE_EVENT(cwEVT_THINGS_COUNTED, cwThingsCountedEvent);
 wxDEFINE_EVENT(cwEVT_COLLECTION_LOADED, cwCollectionLoadedEvent);
 wxDEFINE_EVENT(cwEVT_THING_LOADED, cwThingLoadedEvent);
 wxDEFINE_EVENT(cwEVT_THINGS_LOADED, cwThingsLoadedEvent);
-wxDEFINE_EVENT(cwEVT_LOG_MESSAGE, cwLogMessageEvent);
-wxDEFINE_EVENT(cwEVT_THING_DOWLOADED, cwThingDownloadedEvent);
-wxDEFINE_EVENT(cwEVT_THING_DOWLOADING, cwThingDownloadingEvent);
 
 class CollectionDetailWindow : public wxPanel {
 public:
