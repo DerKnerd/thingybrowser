@@ -72,6 +72,7 @@ CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long l
         auto client = thingy::ThingiverseClient(apiKey);
         try {
             auto things = client.getThingsByCollection(collectionId);
+            wxQueueEvent(sink, new cwThingsCountedEvent(things.size()));
             for (auto i = 0; i < things.size(); ++i) {
                 auto thing = things.at(i);
                 auto httpClient = httplib::Client("cdn.thingiverse.com");
@@ -89,8 +90,7 @@ CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long l
                 }
                 auto bmp = wxBitmap(img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(
                         wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)), wxDefaultPosition));
-                wxQueueEvent(sink,
-                             new cwThingLoadedEvent(i, bmp, thing.name, thing.id));
+                wxQueueEvent(sink, new cwThingLoadedEvent(i, bmp, thing.name, thing.id));
             }
             wxQueueEvent(sink, new cwThingsLoadedEvent());
         } catch (thingy::ThingiverseException &e) {
@@ -123,3 +123,6 @@ cwThingsLoadedEvent::cwThingsLoadedEvent() : wxThreadEvent(cwEVT_THINGS_LOADED) 
 
 cwCollectionLoadedEvent::cwCollectionLoadedEvent(thingy::entities::Collection collection) : collection(
         std::move(collection)), wxThreadEvent(cwEVT_COLLECTION_LOADED) {}
+
+cwThingsCountedEvent::cwThingsCountedEvent(unsigned long long thingCount) : thingCount(thingCount),
+                                                                            wxThreadEvent(cwEVT_THINGS_COUNTED) {}

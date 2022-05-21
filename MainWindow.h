@@ -22,9 +22,14 @@ enum MainWindowActions {
     MainWindowOpenThingById,
     MainWindowOpenThingByUrl,
     MainWindowOpenCollectionById,
+    MainWindowOpenThingOverview,
+    MainWindowOpenCollectionOverview,
+    MainWindowOpenDesignerOverview,
+
     ThingsWindowDownloadThing,
     ThingsWindowOpenOnThingiverse,
     ThingsWindowGoToDesigner,
+
     CollectionsWindowDownloadThings,
     CollectionsWindowGoToDesigner,
     CollectionsWindowOpenOnThingiverse,
@@ -85,6 +90,9 @@ public:
     void downloadThingFilesAndImages(unsigned long long thingId, const std::string &path, const std::string &apiKey);
 
 private:
+    unsigned long long totalThingsToDownload = 0;
+    unsigned long long thingsDownloaded = 0;
+
     wxAuiToolBar *mainWindowToolbar;
     wxAuiToolBar *thingToolbar;
     wxAuiToolBar *collectionToolbar;
@@ -95,7 +103,8 @@ private:
     wxListBox *logOutput;
 
     void handleShow(wxShowEvent &event);
-    void log(const wxString& message);
+
+    void log(const wxString &message);
 
     wxAuiManager auiManager;
     wxAuiNotebook *contentNotebook;

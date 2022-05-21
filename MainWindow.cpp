@@ -12,10 +12,17 @@
 #include "pages/mainwindow/ThingsPage.h"
 #include "helper.h"
 
-MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse the thingiverse"), wxDefaultPosition,
+MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse the Thingiverse"), wxDefaultPosition,
                                    wxSize(1280, 800), wxDEFAULT_FRAME_STYLE | wxCLIP_CHILDREN) {
-    mainWindowToolbar = new wxAuiToolBar(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+    auto panel = new wxPanel(this);
+    mainWindowToolbar = new wxAuiToolBar(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                                          wxAUI_TB_HORIZONTAL | wxAUI_TB_TEXT);
+    mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenThingOverview, _("Open thing list"), wxNullBitmap);
+    mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenCollectionOverview, _("Open collection list"),
+                               wxNullBitmap);
+    mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenDesignerOverview, _("Open designer list"),
+                               wxNullBitmap);
+    mainWindowToolbar->AddSeparator();
     mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenThingById, _("Open thing by id"), wxNullBitmap);
     mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenThingByUrl, _("Open thing by URL"), wxNullBitmap);
     mainWindowToolbar->AddSeparator();
@@ -23,19 +30,19 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
                                wxNullBitmap);
     mainWindowToolbar->Realize();
 
-    thingToolbar = new wxAuiToolBar(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+    thingToolbar = new wxAuiToolBar(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                                     wxAUI_TB_HORIZONTAL | wxAUI_TB_TEXT);
     thingToolbar->AddTool(ThingsWindowDownloadThing, _("Download thing files"), wxNullBitmap);
     thingToolbar->AddTool(ThingsWindowOpenOnThingiverse, _("Open on thingiverse"), wxNullBitmap);
     thingToolbar->Realize();
 
-    collectionToolbar = new wxAuiToolBar(this, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+    collectionToolbar = new wxAuiToolBar(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize,
                                          wxAUI_TB_HORIZONTAL | wxAUI_TB_TEXT);
     collectionToolbar->AddTool(CollectionsWindowDownloadThings, _("Download things"), wxNullBitmap);
     collectionToolbar->AddTool(CollectionsWindowOpenOnThingiverse, _("Open on thingiverse"), wxNullBitmap);
     collectionToolbar->Realize();
 
-    auiManager.SetManagedWindow(this);
+    auiManager.SetManagedWindow(panel);
     SetMinSize(wxSize(1280, 800));
 
     auto menuBar = new wxMenuBar();
@@ -59,12 +66,15 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
     menuBar->Append(thingMenu, _("Things"));
     menuBar->Append(collectionMenu, _("Collections"));
 
-    contentNotebook = new wxAuiNotebook(this, wxID_ANY, wxDefaultPosition, wxSize(-1, -1));
+    contentNotebook = new wxAuiNotebook(panel, wxID_ANY, wxDefaultPosition, wxSize(-1, -1),
+                                        wxAUI_NB_CLOSE_BUTTON | wxAUI_NB_TOP | wxAUI_NB_TAB_SPLIT |
+                                        wxAUI_NB_TAB_MOVE | wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_MIDDLE_CLICK_CLOSE |
+                                        wxAUI_NB_WINDOWLIST_BUTTON);
     contentNotebook->AddPage(new ThingsPage(contentNotebook), _("Things"), true);
     contentNotebook->AddPage(new CollectionsPage(contentNotebook), _("Collections"));
     contentNotebook->AddPage(new DesignersPage(contentNotebook), _("Designers"));
 
-    logOutput = new wxListBox(this, wxID_ANY);
+    logOutput = new wxListBox(panel, wxID_ANY);
 
     auiManager.AddPane(mainWindowToolbar, wxAuiPaneInfo()
             .Name("mainWindowToolbar")
@@ -103,6 +113,15 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
             .Show());
     auiManager.Update();
 
+    Bind(wxEVT_MENU, [this](wxCommandEvent &) {
+        contentNotebook->AddPage(new ThingsPage(contentNotebook), _("Things"), true);
+    }, MainWindowOpenThingOverview);
+    Bind(wxEVT_MENU, [this](wxCommandEvent &) {
+        contentNotebook->AddPage(new CollectionsPage(contentNotebook), _("Collections"), true);
+    }, MainWindowOpenCollectionOverview);
+    Bind(wxEVT_MENU, [this](wxCommandEvent &) {
+        contentNotebook->AddPage(new DesignersPage(contentNotebook), _("Designers"), true);
+    }, MainWindowOpenDesignerOverview);
     Bind(wxEVT_SHOW, &MainWindow::handleShow, this);
     Bind(wxEVT_MENU, [this](wxCommandEvent &) {
         MainApp::getInstance()->DismissPreferencesEditor();
@@ -164,9 +183,13 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
     });
     Bind(cwEVT_THING_DOWLOADED, [this](cwThingDownloadedEvent &event) {
         log(event.message);
+        thingsDownloaded++;
     });
     Bind(cwEVT_THING_DOWLOADING, [this](cwThingDownloadingEvent &event) {
         log(event.message);
+    });
+    Bind(cwEVT_THINGS_COUNTED, [this](cwThingsCountedEvent &event) {
+        totalThingsToDownload += event.thingCount;
     });
 
     auto apiKey = MainApp::getInstance()->GetSettings().thingyverseApiKey;
@@ -175,6 +198,7 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
         fileOpenDialog->Bind(wxEVT_WINDOW_MODAL_DIALOG_CLOSED, [this, apiKey](const wxWindowModalDialogEvent &event) {
             if (event.GetReturnCode() == wxID_OK) {
                 auto dialog = dynamic_cast<wxDirDialog *>(event.GetDialog());
+                totalThingsToDownload++;
                 std::thread([this](const unsigned long long id, const std::string &path, const std::string &apiKey) {
                     this->downloadThingFilesAndImages(id, path, apiKey);
                 }, thingId, dialog->GetPath(), apiKey).detach();
@@ -219,6 +243,9 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
 
         fileOpenDialog->ShowWindowModal();
     }, CollectionsWindowDownloadThings);
+    Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent &event) {
+        event.Veto(totalThingsToDownload > thingsDownloaded);
+    });
 
     contentNotebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, [this](wxAuiNotebookEvent &) {
         if (contentNotebook->GetSelection() != -1) {
@@ -244,6 +271,12 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
             }
 
             auiManager.Update();
+        }
+    });
+    contentNotebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CLOSE, [this](wxAuiNotebookEvent &event) {
+        if (contentNotebook->GetPageCount() == 1) {
+            event.Veto();
+            wxMessageBox(_("You cannot close the last tab"));
         }
     });
 }
@@ -274,7 +307,6 @@ void MainWindow::addThingPage(unsigned long long int thingId, const wxString &ca
     });
     contentNotebook->AddPage(window, caption, true);
 }
-
 
 void MainWindow::addCollectionPage(unsigned long long int collectionId, unsigned long long thingsCount,
                                    const wxString &caption) {

@@ -26,7 +26,7 @@ bool MainApp::OnInit() {
     wxInitAllImageHandlers();
     wxFileSystem::AddHandler(new wxMemoryFSHandler());
     wxFileSystem::AddHandler(new wxInternetFSHandler());
-    SetAppDisplayName(_("Thingybrowser - Browse the thingiverse"));
+    SetAppDisplayName(_("Thingybrowser - Browse the Thingiverse"));
     mainWindow = new MainWindow();
 
     SetTopWindow(mainWindow);
