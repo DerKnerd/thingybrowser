@@ -60,10 +60,12 @@ tbButtonGridPage::tbButtonGridPage(wxWindow *parent, wxWindowID winid, const wxP
     this->SetSizer(sizer);
 
     Bind(tbEVT_LOADED, [this](tbLoadedEvent &event) {
-        this->tiles[event.buttonIndex]->SetBitmap(event.bitmap);
-        this->tiles[event.buttonIndex]->SetLabel(event.title);
-        this->ids[event.buttonIndex] = event.id;
-        this->tiles[event.buttonIndex]->Show();
+        if (event.bitmap.IsOk()) {
+            this->tiles[event.buttonIndex]->SetBitmap(event.bitmap);
+            this->tiles[event.buttonIndex]->SetLabel(event.title);
+            this->ids[event.buttonIndex] = event.id;
+            this->tiles[event.buttonIndex]->Show();
+        }
     });
     Bind(tbEVT_PAGING_DONE, [this](tbPagingDoneEvent &event) {
         this->previousPage->Enable(page > 1);

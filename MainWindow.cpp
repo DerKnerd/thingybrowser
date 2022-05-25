@@ -11,6 +11,7 @@
 #include "collections/CollectionDetailWindow.h"
 #include "pages/mainwindow/ThingsPage.h"
 #include "helper.h"
+#include "things/ThingsByDesignerWindow.h"
 
 MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse the Thingiverse"), wxDefaultPosition,
                                    wxSize(1280, 800), wxDEFAULT_FRAME_STYLE | wxCLIP_CHILDREN) {
@@ -20,8 +21,10 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
     mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenThingOverview, _("Open thing list"), wxNullBitmap);
     mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenCollectionOverview, _("Open collection list"),
                                wxNullBitmap);
+#ifdef EXPERIMENTAL
     mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenDesignerOverview, _("Open designer list"),
                                wxNullBitmap);
+#endif
     mainWindowToolbar->AddSeparator();
     mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenThingById, _("Open thing by id"), wxNullBitmap);
     mainWindowToolbar->AddTool(MainWindowActions::MainWindowOpenThingByUrl, _("Open thing by URL"), wxNullBitmap);
@@ -41,6 +44,11 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
     collectionToolbar->AddTool(CollectionsWindowDownloadThings, _("Download things"), wxNullBitmap);
     collectionToolbar->AddTool(CollectionsWindowOpenOnThingiverse, _("Open on thingiverse"), wxNullBitmap);
     collectionToolbar->Realize();
+
+    thingsByDesignerToolbar = new wxAuiToolBar(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+                                               wxAUI_TB_HORIZONTAL | wxAUI_TB_TEXT);
+    thingsByDesignerToolbar->AddTool(ThingsByDesignerWindowDownloadThings, _("Download things"), wxNullBitmap);
+    thingsByDesignerToolbar->Realize();
 
     auiManager.SetManagedWindow(panel);
     SetMinSize(wxSize(1280, 800));
@@ -72,7 +80,9 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
                                         wxAUI_NB_WINDOWLIST_BUTTON);
     contentNotebook->AddPage(new ThingsPage(contentNotebook), _("Things"), true);
     contentNotebook->AddPage(new CollectionsPage(contentNotebook), _("Collections"));
+#ifdef EXPERIMENTAL
     contentNotebook->AddPage(new DesignersPage(contentNotebook), _("Designers"));
+#endif
 
     logOutput = new wxListBox(panel, wxID_ANY);
     downloadProgress = new wxGauge(panel, wxID_ANY, 1);
@@ -97,6 +107,14 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
             .Top()
             .Hide()
             .Gripper());
+    auiManager.AddPane(thingsByDesignerToolbar, wxAuiPaneInfo()
+            .Name("thingsByDesignerToolbar")
+            .Caption(_("Things actions"))
+            .ToolbarPane()
+            .Top()
+            .Hide()
+            .Gripper());
+
     auiManager.AddPane(logOutput, wxAuiPaneInfo()
             .Name("logOutput")
             .Bottom()
@@ -228,18 +246,6 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
             if (event.GetReturnCode() == wxID_OK) {
                 auto dialog = dynamic_cast<wxDirDialog *>(event.GetDialog());
                 std::thread([this](const wxString &path, const std::string &apiKey, unsigned long long collectionId) {
-                    auto cdnClient = httplib::Client("https://api.thingiverse.com");
-                    cdnClient.set_read_timeout(5 * 60);
-                    cdnClient.set_connection_timeout(5 * 60);
-                    cdnClient.set_bearer_token_auth(apiKey.c_str());
-                    cdnClient.set_follow_location(true);
-
-                    auto apiClient = httplib::Client("https://api.thingiverse.com");
-                    apiClient.set_read_timeout(5 * 60);
-                    apiClient.set_connection_timeout(5 * 60);
-                    apiClient.set_bearer_token_auth(apiKey.c_str());
-                    apiClient.set_follow_location(true);
-
                     auto thingyClient = thingy::ThingiverseClient(apiKey);
                     auto things = thingyClient.getThingsByCollection(collectionId);
                     wxQueueEvent(this, new mwThingsCountedEvent(things.size()));
@@ -256,6 +262,29 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
 
         fileOpenDialog->ShowWindowModal();
     }, CollectionsWindowDownloadThings);
+    Bind(wxEVT_MENU, [this, apiKey](wxCommandEvent &) {
+        auto fileOpenDialog = new wxDirDialog(this, _("Save things"), wxEmptyString, wxDD_DEFAULT_STYLE);
+        fileOpenDialog->Bind(wxEVT_WINDOW_MODAL_DIALOG_CLOSED, [this, apiKey](const wxWindowModalDialogEvent &event) {
+            if (event.GetReturnCode() == wxID_OK) {
+                auto dialog = dynamic_cast<wxDirDialog *>(event.GetDialog());
+                std::thread([this](const wxString &path, const std::string &apiKey, unsigned long long userId) {
+                    auto thingyClient = thingy::ThingiverseClient(apiKey);
+                    auto user = thingyClient.getUser(userId);
+                    auto things = thingyClient.getThingsByUser(user.username, 1, user.countOfDesigns);
+                    wxQueueEvent(this, new mwThingsCountedEvent(things.size()));
+                    for (const auto &thing: things) {
+                        wxQueueEvent(this, new mwThingDownloadingEvent("Downloading thing " + thing.name));
+                        this->downloadThingFilesAndImages(thing.id,
+                                                          path + "/" + std::to_string(thing.id) + " - " + thing.name +
+                                                          "/", apiKey);
+                        wxQueueEvent(this, new mwThingDownloadedEvent("Downloaded thing " + thing.name));
+                    }
+                }, dialog->GetPath(), apiKey, userId).detach();
+            }
+        });
+
+        fileOpenDialog->ShowWindowModal();
+    }, ThingsByDesignerWindowDownloadThings);
     Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent &event) {
         if (totalThingsToDownload > thingsDownloaded) {
             if (wxMessageBox(_("Not all things are downloaded, do you still want to close Thingybrowser?"),
@@ -288,6 +317,14 @@ MainWindow::MainWindow() : wxFrame(nullptr, wxID_ANY, _("Thingybrowser - Browse 
                 auiManager.GetPane(collectionToolbar).Show();
             } else {
                 auiManager.GetPane(collectionToolbar).Hide();
+            }
+
+            auto pageAsThingsByDesignerPage = dynamic_cast<ThingsByDesignerWindow *>(nbPage);
+            if (pageAsThingsByDesignerPage != nullptr) {
+                userId = pageAsThingsByDesignerPage->designerId;
+                auiManager.GetPane(thingsByDesignerToolbar).Show();
+            } else {
+                auiManager.GetPane(thingsByDesignerToolbar).Hide();
             }
 
             auiManager.Update();
@@ -476,6 +513,10 @@ void MainWindow::downloadThingFilesAndImages(unsigned long long thingId, const s
 void MainWindow::log(const wxString &message) {
     logOutput->Append(message);
     logOutput->SetSelection(logOutput->GetCount() - 1);
+}
+
+void MainWindow::addThingsByDesignerPage(unsigned long long int userId, const wxString &caption) {
+    contentNotebook->AddPage(new ThingsByDesignerWindow(contentNotebook, userId), caption, true);
 }
 
 mwThingLoadedEvent::mwThingLoadedEvent(thingy::entities::Thing thing) : thing(std::move(thing)),

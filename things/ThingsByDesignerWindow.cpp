@@ -2,7 +2,7 @@
 // Created by imanuel on 15.05.22.
 //
 
-#include "CollectionDetailWindow.h"
+#include "ThingsByDesignerWindow.h"
 
 #include <utility>
 #include "../helper.h"
@@ -11,9 +11,9 @@
 #include "wx/wrapsizer.h"
 #include "../things/ThingDetailWindow.h"
 
-CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long long int collectionId,
-                                               unsigned long long int thingCount) : wxPanel(parent),
-                                                                                    collectionId(collectionId) {
+ThingsByDesignerWindow::ThingsByDesignerWindow(wxWindow *parent, unsigned long long int designerId) : wxPanel(parent),
+                                                                                                      designerId(
+                                                                                                              designerId) {
     auto contentSizer = new wxFlexGridSizer(2, 0, 5, 5);
     contentSizer->AddGrowableRow(1);
     contentSizer->AddGrowableCol(0);
@@ -23,13 +23,18 @@ CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long l
     contentSizer->Add(this->title, wxSizerFlags().Expand().Border(wxALL, WXC_FROM_DIP(5)));
 
     SetSizer(contentSizer);
-    SetName("CollectionsWindow");
+    SetName("ThingsByDesignerWindow");
     SetSize(wxDLG_UNIT(this, wxSize(-1, -1)));
     auto thingListSizer = new wxWrapSizer(wxHORIZONTAL);
     auto scrolledWindow = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxSize(-1, -1), wxVSCROLL);
     scrolledWindow->SetSizer(thingListSizer);
     scrolledWindow->SetScrollRate(5, 5);
     contentSizer->Add(scrolledWindow, wxSizerFlags().Expand().Border(wxALL, WXC_FROM_DIP(5)));
+
+    auto apiKey = MainApp::getInstance()->GetSettings().thingyverseApiKey;
+    auto user = thingy::ThingiverseClient(apiKey).getUser(designerId);
+    auto thingCount = user.countOfDesigns;
+    title->SetLabel("Things by " + user.username);
 
     ids = std::vector<unsigned long long>(thingCount);
     thingButtons = std::vector<wxBitmapButton *>(thingCount);
@@ -48,9 +53,8 @@ CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long l
             MainApp::getInstance()->getMainWindow()->addThingPage(thingId, caption);
         });
     }
-    auto apiKey = MainApp::getInstance()->GetSettings().thingyverseApiKey;
 
-    Bind(cwEVT_THING_LOADED, [this](const cwThingLoadedEvent &event) {
+    Bind(tbdEVT_THING_LOADED, [this](const tbdThingLoadedEvent &event) {
         if (event.bitmap.IsOk()) {
             auto bmp = event.bitmap;
             auto idx = event.buttonIndex;
@@ -61,19 +65,12 @@ CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long l
             thingButtons[idx]->Show();
         }
     });
-    Bind(cwEVT_COLLECTION_LOADED, [this](const cwCollectionLoadedEvent &event) {
-        auto collection = event.collection;
-        title->SetLabel("#" + std::to_string(collection.id) + " - " + collection.name + _(" by ") +
-                        collection.creator.username);
-        Bind(wxEVT_MENU, [event](wxCommandEvent &) {
-            wxLaunchDefaultBrowser(event.collection.absoluteUrl);
-        }, CollectionsWindowOpenOnThingiverse);
-    });
 
-    std::thread([](wxEvtHandler *sink, unsigned long long collectionId, const std::string &apiKey) {
+    std::thread([](wxEvtHandler *sink, const std::string& username, unsigned long long thingCount,
+                   const std::string &apiKey) {
         auto client = thingy::ThingiverseClient(apiKey);
         try {
-            auto things = client.getThingsByCollection(collectionId);
+            auto things = client.getThingsByUser(username, 1, thingCount);
             for (auto i = 0; i < things.size(); ++i) {
                 auto thing = things.at(i);
                 auto httpClient = httplib::Client("cdn.thingiverse.com");
@@ -91,28 +88,24 @@ CollectionDetailWindow::CollectionDetailWindow(wxWindow *parent, unsigned long l
                 }
                 auto bmp = wxBitmap(img.Scale(width, height, wxIMAGE_QUALITY_HIGH).Size(
                         wxSize(WXC_FROM_DIP(240), WXC_FROM_DIP(240)), wxDefaultPosition));
-                wxQueueEvent(sink, new cwThingLoadedEvent(i, bmp, thing.name, thing.id));
+                wxQueueEvent(sink, new tbdThingLoadedEvent(i, bmp, thing.name, thing.id));
             }
-            wxQueueEvent(sink, new cwThingsLoadedEvent());
+            wxQueueEvent(sink, new tbdThingsLoadedEvent());
         } catch (thingy::ThingiverseException &e) {
             wxLogStatus(e.what());
         } catch (std::exception &e) {
             wxLogStatus(e.what());
         }
-    }, this, collectionId, apiKey).detach();
-    std::thread([](wxEvtHandler *sink, unsigned long long collectionId, const std::string &apiKey) {
-        auto client = thingy::ThingiverseClient(apiKey);
-        auto collection = client.getCollection(collectionId);
-        wxQueueEvent(sink, new cwCollectionLoadedEvent(collection));
-    }, this, collectionId, apiKey).detach();
+    }, this, user.username, thingCount, apiKey).detach();
 }
 
-cwThingLoadedEvent::cwThingLoadedEvent(int buttonIndex, const wxBitmap &bitmap, const wxString &title,
+tbdThingLoadedEvent::tbdThingLoadedEvent(int buttonIndex, const wxBitmap &bitmap, const wxString &title,
                                          unsigned long long int id) : buttonIndex(buttonIndex), bitmap(bitmap),
-                                                                    title(title), id(id),
-                                                                    wxThreadEvent(cwEVT_THING_LOADED) {}
+                                                                      title(title), id(id),
+                                                                      wxThreadEvent(tbdEVT_THING_LOADED) {}
 
-cwThingsLoadedEvent::cwThingsLoadedEvent() : wxThreadEvent(cwEVT_THINGS_LOADED) {}
+tbdThingsLoadedEvent::tbdThingsLoadedEvent() : wxThreadEvent(tbdEVT_THINGS_LOADED) {}
 
-cwCollectionLoadedEvent::cwCollectionLoadedEvent(thingy::entities::Collection collection) : collection(
-        std::move(collection)), wxThreadEvent(cwEVT_COLLECTION_LOADED) {}
+tbdDesignerLoadedEvent::tbdDesignerLoadedEvent(thingy::entities::User designer) : designer(std::move(designer)),
+                                                                                  wxThreadEvent(
+                                                                                          tbdEVT_DESIGNER_LOADED) {}

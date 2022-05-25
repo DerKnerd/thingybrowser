@@ -30,6 +30,8 @@ enum MainWindowActions {
     ThingsWindowOpenOnThingiverse,
     ThingsWindowGoToDesigner,
 
+    ThingsByDesignerWindowDownloadThings,
+
     CollectionsWindowDownloadThings,
     CollectionsWindowGoToDesigner,
     CollectionsWindowOpenOnThingiverse,
@@ -113,6 +115,8 @@ public:
 
     void downloadThingFilesAndImages(unsigned long long thingId, const std::string &path, const std::string &apiKey);
 
+    void addThingsByDesignerPage(unsigned long long int userId, const wxString &caption);
+
 private:
     unsigned long long totalThingsToDownload = 0;
     unsigned long long thingsDownloaded = 0;
@@ -120,8 +124,10 @@ private:
     wxAuiToolBar *mainWindowToolbar;
     wxAuiToolBar *thingToolbar;
     wxAuiToolBar *collectionToolbar;
+    wxAuiToolBar *thingsByDesignerToolbar;
     unsigned long long thingId;
     unsigned long long collectionId;
+    unsigned long long userId;
     thingy::entities::Thing thing;
 
     wxListBox *logOutput;

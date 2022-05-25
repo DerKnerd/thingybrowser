@@ -50,7 +50,6 @@ public:
     unsigned long long collectionId;
 private:
     wxStaticText *title;
-    wxProgressDialog *downloadProgress;
     std::vector<wxBitmapButton *> thingButtons;
     std::vector<unsigned long long> ids;
 };

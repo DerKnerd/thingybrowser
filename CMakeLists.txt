@@ -38,12 +38,11 @@ conan_add_remote(NAME conan.imanuel.dev
 conan_cmake_configure(
         REQUIRES
         openssl/1.1.1c
-        libthingy/0.29@libthingy/libthingy
+        libthingy/0.32@libthingy/libthingy
         cpp-httplib/0.10.3
         nlohmann_json/3.10.5
         GENERATORS cmake_find_package
 )
-
 
 if (MINGW)
     conan_cmake_install(PATH_OR_REFERENCE .
@@ -60,7 +59,7 @@ endif ()
 
 find_package(libthingy)
 
-add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp pages/mainwindow/ThingsPage.cpp pages/mainwindow/ThingsPage.h helper.h pages/mainwindow/tbDataPage.h pages/mainwindow/tbButtonGridPage.cpp pages/mainwindow/tbButtonGridPage.h pages/mainwindow/CollectionsPage.cpp pages/mainwindow/CollectionsPage.h pages/mainwindow/DesignersPage.cpp pages/mainwindow/DesignersPage.h things/ThingDetailWindow.cpp things/ThingDetailWindow.h helpers/font.h helpers/tbNoLinkHtmlWindow.h collections/CollectionDetailWindow.cpp helpers/tbNoLinkHtmlWindow.cpp)
+add_executable(thingybrowser main.rc main.cpp MainWindow.cpp MainApp.cpp settings/thingyverseSettingsPage.cpp settings/thingyverseSettingsPagePanel.cpp pages/mainwindow/ThingsPage.cpp pages/mainwindow/ThingsPage.h helper.h pages/mainwindow/tbDataPage.h pages/mainwindow/tbButtonGridPage.cpp pages/mainwindow/tbButtonGridPage.h pages/mainwindow/CollectionsPage.cpp pages/mainwindow/CollectionsPage.h pages/mainwindow/DesignersPage.cpp pages/mainwindow/DesignersPage.h things/ThingDetailWindow.cpp things/ThingDetailWindow.h helpers/font.h helpers/tbNoLinkHtmlWindow.h collections/CollectionDetailWindow.cpp helpers/tbNoLinkHtmlWindow.cpp things/ThingsByDesignerWindow.cpp)
 include_directories(libs/libthingy)
 if (MINGW)
     target_link_libraries(thingybrowser PRIVATE wx::base wx::core wx::html wx::net wx::aui libthingy::libthingy httplib::httplib)

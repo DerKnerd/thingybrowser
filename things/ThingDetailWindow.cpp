@@ -20,7 +20,7 @@ ThingDetailWindow::ThingDetailWindow(wxWindow *parent, unsigned long long thingI
     title = new wxStaticText(this, wxID_ANY, "", wxDefaultPosition, wxSize(-1, -1));
     title->SetFont(getTitleFont());
 
-    createdBy = new wxHyperlinkCtrl(this, wxID_ANY, "More from designer", " ");
+    createdBy = new wxHyperlinkCtrl(this, wxID_ANY, "More things from designer", " ");
     createdBy->SetFont(getTitleFont());
 
     contentSizer->Add(title, wxGBPosition(0, 0), wxGBSpan(1, 2),
@@ -48,12 +48,17 @@ ThingDetailWindow::ThingDetailWindow(wxWindow *parent, unsigned long long thingI
     Bind(twEVT_THING_LOADED, [this](twThingLoadedEvent &event) {
         this->thing = event.thing;
         this->displayThing();
+        createdBy->Bind(wxEVT_HYPERLINK, [this](wxHyperlinkEvent &event) {
+            MainApp::getInstance()->getMainWindow()->addThingsByDesignerPage(thing.creator.id, thing.creator.username);
+        });
     });
     Bind(twEVT_IMAGE_LOADED, [this](twImageLoadedEvent &event) {
-        auto img = new wxStaticBitmap(scrolledWindow, wxID_ANY, wxNullBitmap);
-        img->SetBitmap(event.image);
-        this->imageSizer->Add(img, wxGBPosition(imageSizer->GetEffectiveRowsCount() + 1, 0), wxDefaultSpan,
-                              wxSizerFlags().Proportion(1).Expand().Border(wxALL, WXC_FROM_DIP(5)).GetFlags());
+        if (event.image.IsOk()) {
+            auto img = new wxStaticBitmap(scrolledWindow, wxID_ANY, wxNullBitmap);
+            img->SetBitmap(event.image);
+            this->imageSizer->Add(img, wxGBPosition(imageSizer->GetEffectiveRowsCount() + 1, 0), wxDefaultSpan,
+                                  wxSizerFlags().Proportion(1).Expand().Border(wxALL, WXC_FROM_DIP(5)).GetFlags());
+        }
     });
     Bind(twEVT_ALL_IMAGES_LOADED, [this](twAllImagesLoadedEvent &event) {
         this->SetVirtualSize(wxSize(this->GetClientSize().x, this->GetClientSize().y + event.height));
@@ -63,36 +68,40 @@ ThingDetailWindow::ThingDetailWindow(wxWindow *parent, unsigned long long thingI
 
     auto apiKey = MainApp::getInstance()->GetSettings().thingyverseApiKey;
     std::thread([](wxWindow *sink, unsigned long long thingId, const std::string &apiKey) {
-        auto client = thingy::ThingiverseClient(apiKey);
-        auto thing = client.getThing(thingId);
-        wxQueueEvent(sink, new twThingLoadedEvent(thing));
+        try {
+            auto client = thingy::ThingiverseClient(apiKey);
+            auto thing = client.getThing(thingId);
+            wxQueueEvent(sink, new twThingLoadedEvent(thing));
 
-        auto images = client.getImagesByThing(thingId);
-        auto totalHeight = 0;
-        for (const auto &image: images) {
-            auto httpClient = httplib::Client("cdn.thingiverse.com");
-            auto imageSizes = std::find_if(image.sizes.begin(), image.sizes.end(),
-                                           [](const thingy::entities::ImageSize &size) {
-                                               if (size.size == "large" && size.type == "display") {
-                                                   return true;
-                                               }
-                                               return false;
-                                           });
-            auto url = image.sizes.front().url;
-            if (imageSizes.base() != nullptr) {
-                url = imageSizes.base()->url;
+            auto images = client.getImagesByThing(thingId);
+            auto totalHeight = 0;
+            for (const auto &image: images) {
+                auto httpClient = httplib::Client("cdn.thingiverse.com");
+                auto imageSizes = std::find_if(image.sizes.begin(), image.sizes.end(),
+                                               [](const thingy::entities::ImageSize &size) {
+                                                   if (size.size == "large" && size.type == "display") {
+                                                       return true;
+                                                   }
+                                                   return false;
+                                               });
+                auto url = image.sizes.front().url;
+                if (imageSizes.base() != nullptr) {
+                    url = imageSizes.base()->url;
+                }
+                auto response = httpClient.Get(url.c_str());
+                auto stream = wxMemoryInputStream(response->body.c_str(), response->body.length());
+                auto img = wxImage(stream);
+                auto width = WXC_FROM_DIP(480);
+                auto height = static_cast<int>(static_cast<double>(img.GetHeight()) /
+                                               (static_cast<double>(img.GetWidth()) / WXC_FROM_DIP(480)));
+                auto bmp = wxBitmap(img.Scale(width, height, wxIMAGE_QUALITY_HIGH));
+                wxQueueEvent(sink, new twImageLoadedEvent(bmp));
+                totalHeight += height + 10;
             }
-            auto response = httpClient.Get(url.c_str());
-            auto stream = wxMemoryInputStream(response->body.c_str(), response->body.length());
-            auto img = wxImage(stream);
-            auto width = WXC_FROM_DIP(480);
-            auto height = static_cast<int>(static_cast<double>(img.GetHeight()) /
-                                           (static_cast<double>(img.GetWidth()) / WXC_FROM_DIP(480)));
-            auto bmp = wxBitmap(img.Scale(width, height, wxIMAGE_QUALITY_HIGH));
-            wxQueueEvent(sink, new twImageLoadedEvent(bmp));
-            totalHeight += height + 10;
+            wxQueueEvent(sink, new twAllImagesLoadedEvent(totalHeight));
+        } catch (std::exception &exception) {
+            wxLogStatus(exception.what());
         }
-        wxQueueEvent(sink, new twAllImagesLoadedEvent(totalHeight));
     }, this, thingId, apiKey).detach();
 }
 
