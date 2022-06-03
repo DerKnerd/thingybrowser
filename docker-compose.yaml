@@ -1,11 +1,5 @@
 version: "3"
 services:
-  builder-mingw-fedora:
-    build:
-      dockerfile: building/docker/Dockerfile.fedora.mingw
-    volumes:
-      - .:/thingybrowser
-      - ./out/mingw/fedora:/out
   builder-mingw-ubuntu:
     build:
       dockerfile: building/docker/Dockerfile.ubuntu.mingw
