@@ -39,6 +39,25 @@ spec:
         }
     }
     stages {
+        stage('Prepare git environment') {
+            steps {
+                sh 'apt-get update && apt-get upgrade -y'
+                sh 'apt-get install git'
+
+                sh 'git config --global --add safe.directory $PWD'
+                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets'
+                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/catch'
+                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/zlib'
+                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/png'
+                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/expat'
+                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/tiff'
+                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/jpeg'
+                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/pcre'
+                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/nanosvg'
+
+                sh 'git submodule update --init --recursive'
+            }
+        }
         stage('Build thingybrowser') {
             parallel {
                 stage('Build for Windows') {
@@ -49,22 +68,10 @@ spec:
                             sh 'wget https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb'
                             sh 'dpkg -i conan-ubuntu-64.deb'
 
-                            sh 'git config --global --add safe.directory $PWD'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/catch'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/zlib'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/png'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/expat'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/tiff'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/jpeg'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/pcre'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/nanosvg'
+                            sh 'cmake -DCMAKE_TOOLCHAIN_FILE=./building/cmake/mingw-w64-x86_64.cmake -B ./build-windows -S . -DCMAKE_BUILD_TYPE=Release -DMINGW=1'
+                            sh 'cmake --build ./build-windows --target thingybrowser'
 
-                            sh 'git submodule update --init --recursive'
-                            sh 'cmake -DCMAKE_TOOLCHAIN_FILE=./building/cmake/mingw-w64-x86_64.cmake -B ./build -S . -DCMAKE_BUILD_TYPE=Release -DMINGW=1'
-                            sh 'cmake --build ./build --target thingybrowser'
-
-                            archiveArtifacts './build/thingybrowser.exe'
+                            archiveArtifacts './build-windows/thingybrowser.exe'
                         }
                     }
                 }
@@ -78,22 +85,10 @@ spec:
                             sh 'wget https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb'
                             sh 'dpkg -i conan-ubuntu-64.deb'
 
-                            sh 'git config --global --add safe.directory $PWD'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/catch'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/zlib'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/png'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/expat'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/tiff'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/jpeg'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/pcre'
-                            sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/nanosvg'
+                            sh 'cmake -B ./build-linux -S . -DCMAKE_BUILD_TYPE=Release'
+                            sh 'cmake --build ./build-linux --target thingybrowser'
 
-                            sh 'git submodule update --init --recursive'
-                            sh 'cmake --build ./build --target thingybrowser'
-                            sh 'cmake --build ./build --target thingybrowser'
-
-                            archiveArtifacts './build/thingybrowser'
+                            archiveArtifacts './build-linux/thingybrowser'
                         }
                     }
                 }
