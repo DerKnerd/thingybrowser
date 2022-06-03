@@ -48,6 +48,8 @@ spec:
                             sh 'apt-get install mingw-w64-x86-64-dev g++-mingw-w64-x86-64-posix gcc-mingw-w64-x86-64-posix binutils-mingw-w64-x86-64 build-essential cmake git wget rsync -y'
                             sh 'wget https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb'
                             sh 'dpkg -i conan-ubuntu-64.deb'
+
+                            sh 'git config --global --add safe.directory /home/jenkins/agent/workspace/DerKnerd_thingybrowser_main'
                             sh 'git submodule update --init --recursive'
                             sh 'cmake -DCMAKE_TOOLCHAIN_FILE=./building/cmake/mingw-w64-x86_64.cmake -B ./build -S . -DCMAKE_BUILD_TYPE=Release -DMINGW=1'
                             sh 'cmake --build ./build --target thingybrowser'
@@ -65,6 +67,8 @@ spec:
                             sh 'apt-get install libgtk-3-dev -y libgtk-3-0 libgtk-3-bin libgtk-3-common libgtk2.0-0 libgtk2.0-bin libgtk2.0-common # ubuntu-desktop'
                             sh 'wget https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb'
                             sh 'dpkg -i conan-ubuntu-64.deb'
+
+                            sh 'git config --global --add safe.directory /home/jenkins/agent/workspace/DerKnerd_thingybrowser_main'
                             sh 'git submodule update --init --recursive'
                             sh 'cmake --build ./build --target thingybrowser'
                             sh 'cmake --build ./build --target thingybrowser'
