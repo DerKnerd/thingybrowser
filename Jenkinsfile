@@ -40,7 +40,7 @@ spec:
     }
     stages {
         stage('Build thingybrowser') {
-            parallel
+            parallel {
                 stage('Build for Windows') {
                     steps {
                         container('windows') {
