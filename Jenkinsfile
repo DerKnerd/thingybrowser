@@ -39,25 +39,6 @@ spec:
         }
     }
     stages {
-        stage('Prepare git environment') {
-            steps {
-                sh 'apt-get update && apt-get upgrade -y'
-                sh 'apt-get install git'
-
-                sh 'git config --global --add safe.directory $PWD'
-                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets'
-                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/catch'
-                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/zlib'
-                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/png'
-                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/expat'
-                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/tiff'
-                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/src/jpeg'
-                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/pcre'
-                sh 'git config --global --add safe.directory $PWD/libs/wxWidgets/3rdparty/nanosvg'
-
-                sh 'git submodule update --init --recursive'
-            }
-        }
         stage('Build thingybrowser') {
             parallel {
                 stage('Build for Windows') {
