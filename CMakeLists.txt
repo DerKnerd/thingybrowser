@@ -21,6 +21,7 @@ if (WIN32 OR MINGW)
 endif ()
 
 set(wxUSE_STL ON)
+set(wxUSE_OPENGL OFF)
 set(wxBUILD_SHARED OFF)
 set(wxUSE_ZLIB builtin)
 set(wxUSE_EXPAT builtin)
