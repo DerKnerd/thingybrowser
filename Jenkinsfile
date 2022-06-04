@@ -49,10 +49,15 @@ spec:
                             sh 'wget https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb'
                             sh 'dpkg -i conan-ubuntu-64.deb'
 
-                            sh 'cmake -DCMAKE_TOOLCHAIN_FILE=./building/cmake/mingw-w64-x86_64.cmake -B ./build-windows -S . -DCMAKE_BUILD_TYPE=Release -DMINGW=1'
-                            sh 'cmake --build ./build-windows --target thingybrowser'
+                            sh 'mkdir ./windows'
+                            sh 'rsync -a . ./windows'
 
-                            archiveArtifacts './build-windows/thingybrowser.exe'
+                            dir('./windows') {
+                                sh 'cmake -DCMAKE_TOOLCHAIN_FILE=./building/cmake/mingw-w64-x86_64.cmake -B ./build-windows -S . -DCMAKE_BUILD_TYPE=Release -DMINGW=1'
+                                sh 'cmake --build ./build-windows --target thingybrowser'
+
+                                archiveArtifacts './build-windows/thingybrowser.exe'
+                            }
                         }
                     }
                 }
@@ -66,10 +71,15 @@ spec:
                             sh 'wget https://github.com/conan-io/conan/releases/latest/download/conan-ubuntu-64.deb'
                             sh 'dpkg -i conan-ubuntu-64.deb'
 
-                            sh 'cmake -B ./build-linux -S . -DCMAKE_BUILD_TYPE=Release'
-                            sh 'cmake --build ./build-linux --target thingybrowser'
+                            sh 'mkdir ./linux'
+                            sh 'rsync -a . ./linux'
 
-                            archiveArtifacts './build-linux/thingybrowser'
+                            dir('./linux') {
+                                sh 'cmake -B ./build-linux -S . -DCMAKE_BUILD_TYPE=Release'
+                                sh 'cmake --build ./build-linux --target thingybrowser'
+
+                                archiveArtifacts './build-linux/thingybrowser'
+                            }
                         }
                     }
                 }
